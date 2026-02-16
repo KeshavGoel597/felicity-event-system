@@ -553,6 +553,12 @@ const cancelRegistration = async (req, res) => {
     registration.participationStatus = 'Cancelled';
     await registration.save();
 
+    // Decrement currentRegistrations on the event
+    if (registration.eventId && registration.eventId.currentRegistrations > 0) {
+      registration.eventId.currentRegistrations -= 1;
+      await registration.eventId.save();
+    }
+
     res.status(200).json({
       success: true,
       message: 'Registration cancelled successfully',

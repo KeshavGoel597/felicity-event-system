@@ -162,7 +162,7 @@ const PaymentProofUploadPage = () => {
             </button>
             <div className="flex-1">
               <h1 className="text-2xl font-bold text-gray-900">Upload Payment Proof</h1>
-              <p className="text-sm text-gray-600">{registration.event.eventName}</p>
+              <p className="text-sm text-gray-600">{registration.eventId?.eventName || 'Event'}</p>
             </div>
           </div>
         </div>

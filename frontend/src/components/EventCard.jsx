@@ -3,21 +3,21 @@ import { formatDate, formatCurrency, getStatusBadgeClass } from '../utils/helper
 
 const EventCard = ({ event, onClick }) => {
   const {
-    name,
-    description,
+    eventName,
+    eventDescription,
     eventType,
-    category,
-    eventDate,
+    eligibility,
+    eventStartDate,
     location,
-    maxParticipants,
-    registeredCount = 0,
+    registrationLimit,
+    currentRegistrations = 0,
     registrationFee,
     status,
     bannerImage,
   } = event;
 
-  const spotsLeft = maxParticipants - registeredCount;
-  const isFull = spotsLeft <= 0;
+  const spotsLeft = registrationLimit ? registrationLimit - currentRegistrations : Infinity;
+  const isFull = registrationLimit ? spotsLeft <= 0 : false;
   const isAlmostFull = spotsLeft <= 10 && spotsLeft > 0;
 
   return (
@@ -29,13 +29,13 @@ const EventCard = ({ event, onClick }) => {
       {bannerImage ? (
         <img
           src={bannerImage}
-          alt={name}
+          alt={eventName}
           className="w-full h-48 object-cover"
         />
       ) : (
         <div className="w-full h-48 bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center">
           <span className="text-white text-4xl font-bold">
-            {name.charAt(0)}
+            {eventName?.charAt(0)}
           </span>
         </div>
       )}
@@ -45,7 +45,7 @@ const EventCard = ({ event, onClick }) => {
         {/* Header */}
         <div className="flex items-start justify-between mb-2">
           <h3 className="text-xl font-semibold text-gray-900 flex-1">
-            {name}
+            {eventName}
           </h3>
           <span className={getStatusBadgeClass(status)}>{status}</span>
         </div>
@@ -53,28 +53,30 @@ const EventCard = ({ event, onClick }) => {
         {/* Event Type & Category */}
         <div className="flex gap-2 mb-3">
           <span className="badge badge-info">{eventType}</span>
-          <span className="badge bg-purple-100 text-purple-800">{category}</span>
+          {eligibility && <span className="badge bg-purple-100 text-purple-800">{eligibility}</span>}
         </div>
 
         {/* Description */}
         <p className="text-gray-600 text-sm mb-4 line-clamp-2">
-          {description}
+          {eventDescription}
         </p>
 
         {/* Event Details */}
         <div className="space-y-2 mb-4">
           <div className="flex items-center text-sm text-gray-700">
             <Calendar className="w-4 h-4 mr-2 text-primary-600" />
-            <span>{formatDate(eventDate)}</span>
+            <span>{formatDate(eventStartDate)}</span>
           </div>
+          {location && (
           <div className="flex items-center text-sm text-gray-700">
             <MapPin className="w-4 h-4 mr-2 text-primary-600" />
             <span>{location}</span>
           </div>
+          )}
           <div className="flex items-center text-sm text-gray-700">
             <Users className="w-4 h-4 mr-2 text-primary-600" />
             <span>
-              {registeredCount} / {maxParticipants} registered
+              {currentRegistrations} / {registrationLimit || '∞'} registered
             </span>
           </div>
           {registrationFee > 0 && (

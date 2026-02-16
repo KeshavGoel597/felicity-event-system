@@ -60,7 +60,7 @@ const initializeSocket = (server) => {
         if (socket.userRole === 'participant') {
           const registration = await Registration.findOne({
             eventId,
-            participant: socket.userId,
+            participantId: socket.userId,
           });
 
           if (!registration) {
@@ -95,7 +95,7 @@ const initializeSocket = (server) => {
         if (socket.userRole === 'participant') {
           const registration = await Registration.findOne({
             eventId,
-            participant: socket.userId,
+            participantId: socket.userId,
           });
 
           if (!registration) {
@@ -115,7 +115,7 @@ const initializeSocket = (server) => {
         });
 
         // Populate user details
-        await discussion.populate('participant', 'firstName lastName name email');
+        await discussion.populate('participant', 'firstName lastName email');
 
         // Broadcast to all users in the room
         io.to(`event-${eventId}`).emit('new-message', {
@@ -166,7 +166,9 @@ const initializeSocket = (server) => {
     socket.on('typing', ({ eventId, isTyping }) => {
       socket.to(`event-${eventId}`).emit('user-typing', {
         userId: socket.userId,
-        userName: socket.user.name || `${socket.user.firstName} ${socket.user.lastName}`,
+        userName: socket.user.firstName
+          ? `${socket.user.firstName} ${socket.user.lastName}`
+          : socket.user.organizerName || 'Unknown',
         isTyping,
       });
     });

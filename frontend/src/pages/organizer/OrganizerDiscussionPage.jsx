@@ -45,7 +45,7 @@ const OrganizerDiscussionPage = () => {
         organizerAPI.getOrganizerDiscussions(eventId),
       ]);
       
-      setEvent(eventRes.data.data);
+      setEvent(eventRes.data.event);
       setDiscussions(discussionsRes.data.data);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to load discussions');
@@ -174,7 +174,7 @@ const OrganizerDiscussionPage = () => {
                             ? 'text-purple-700'
                             : 'text-gray-600'
                         }`}>
-                          {discussion.participant.name}
+                          {discussion.participant.firstName ? `${discussion.participant.firstName} ${discussion.participant.lastName || ''}`.trim() : discussion.participant.organizerName || 'Unknown'}
                           {discussion.isOrganizer && ' (Organizer)'}
                           {isOwnMessage && ' (You)'}
                         </p>

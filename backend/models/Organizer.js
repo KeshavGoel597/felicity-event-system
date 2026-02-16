@@ -18,6 +18,8 @@ const organizerSchema = new mongoose.Schema(
           'Literary',
           'Arts',
           'Gaming',
+          'Social',
+          'Academic',
           'Other',
         ],
         message: 'Please select a valid category',

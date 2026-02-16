@@ -28,7 +28,7 @@ const AttendanceListPage = () => {
         organizerAPI.getAttendanceStats(eventId),
       ]);
       
-      setEvent(eventRes.data.data);
+      setEvent(eventRes.data.event);
       setAttendanceData(attendanceRes.data);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to load data');

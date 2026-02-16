@@ -29,7 +29,7 @@ const OrganizerEventsPage = () => {
       setLoading(true);
       setError('');
       const response = await organizerAPI.getMyEvents();
-      setEvents(response.data.data);
+      setEvents(response.data.events || []);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to fetch events');
     } finally {
@@ -57,7 +57,7 @@ const OrganizerEventsPage = () => {
     }
 
     try {
-      await organizerAPI.cancelEvent(eventId);
+      await organizerAPI.changeEventStatus(eventId, { newStatus: 'Closed' });
       setSuccess('Event cancelled successfully');
       fetchEvents();
     } catch (err) {
@@ -71,7 +71,7 @@ const OrganizerEventsPage = () => {
     }
 
     try {
-      await organizerAPI.completeEvent(eventId);
+      await organizerAPI.changeEventStatus(eventId, { newStatus: 'Completed' });
       setSuccess('Event marked as completed');
       fetchEvents();
     } catch (err) {
@@ -85,8 +85,8 @@ const OrganizerEventsPage = () => {
     }
 
     try {
-      await organizerAPI.deleteEvent(eventId);
-      setSuccess('Event deleted successfully');
+      await organizerAPI.changeEventStatus(eventId, { newStatus: 'Closed' });
+      setSuccess('Event closed successfully');
       fetchEvents();
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to delete event');
@@ -137,7 +137,7 @@ const OrganizerEventsPage = () => {
               </button>
               <div className="flex items-center gap-2 text-gray-700">
                 <User className="w-5 h-5" />
-                <span className="font-medium">{user?.name}</span>
+                <span className="font-medium">{user?.organizerName || user?.firstName}</span>
               </div>
               <button
                 onClick={handleLogout}
@@ -171,8 +171,9 @@ const OrganizerEventsPage = () => {
             { key: 'all', label: 'All Events', count: events.length },
             { key: 'draft', label: 'Drafts', count: events.filter(e => e.status === 'Draft').length },
             { key: 'published', label: 'Published', count: events.filter(e => e.status === 'Published').length },
+            { key: 'ongoing', label: 'Ongoing', count: events.filter(e => e.status === 'Ongoing').length },
             { key: 'completed', label: 'Completed', count: events.filter(e => e.status === 'Completed').length },
-            { key: 'cancelled', label: 'Cancelled', count: events.filter(e => e.status === 'Cancelled').length },
+            { key: 'closed', label: 'Closed', count: events.filter(e => e.status === 'Closed').length },
           ].map(tab => (
             <button
               key={tab.key}
@@ -218,28 +219,28 @@ const OrganizerEventsPage = () => {
                   <div className="flex-1">
                     <div className="flex items-start justify-between mb-2">
                       <h3 className="text-xl font-semibold text-gray-900">
-                        {event.name}
+                        {event.eventName}
                       </h3>
                       <span className={getStatusBadgeClass(event.status)}>
                         {event.status}
                       </span>
                     </div>
                     <p className="text-gray-600 mb-3 line-clamp-2">
-                      {event.description}
+                      {event.eventDescription}
                     </p>
                     <div className="flex flex-wrap gap-4 text-sm text-gray-700">
                       <div className="flex items-center">
                         <Calendar className="w-4 h-4 mr-1 text-primary-600" />
-                        <span>{formatDate(event.eventDate)}</span>
+                        <span>{formatDate(event.eventStartDate)}</span>
                       </div>
                       <div className="flex items-center">
                         <Users className="w-4 h-4 mr-1 text-primary-600" />
                         <span>
-                          {event.registeredCount || 0} / {event.maxParticipants} registered
+                          {event.currentRegistrations || 0} / {event.registrationLimit || '∞'} registered
                         </span>
                       </div>
                       <span className="badge badge-info">{event.eventType}</span>
-                      <span className="badge bg-purple-100 text-purple-800">{event.category}</span>
+                      <span className="badge bg-purple-100 text-purple-800">{event.eligibility}</span>
                     </div>
                   </div>
 

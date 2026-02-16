@@ -5,12 +5,23 @@ const {
   participantLogin,
   organizerLogin,
   adminLogin,
+  completeOnboarding,
+  getMe,
 } = require('../controllers/authController');
 const { requestPasswordReset } = require('../controllers/passwordResetController');
+const { protect, authorize } = require('../middleware/auth');
 
-// Participant routes
+// Participant routes (support both /participant/signup and /signup for frontend compatibility)
 router.post('/participant/signup', participantSignup);
+router.post('/signup', participantSignup);
 router.post('/participant/login', participantLogin);
+router.post('/login', participantLogin);
+
+// Onboarding route
+router.post('/onboarding', protect, authorize('participant'), completeOnboarding);
+
+// Get current user profile
+router.get('/me', protect, getMe);
 
 // Organizer routes
 router.post('/organizer/login', organizerLogin);

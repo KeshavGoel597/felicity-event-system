@@ -39,7 +39,7 @@ const EventRegistrationPage = () => {
         setFormData(prev => ({
           ...prev,
           merchandiseSelections: response.data.data.merchandiseItems?.map(item => ({
-            name: item.name,
+            itemName: item.itemName,
             quantity: 0,
             price: item.price,
           })) || [],
@@ -129,10 +129,10 @@ const EventRegistrationPage = () => {
 
   const validateForm = () => {
     // Check required custom fields
-    if (event.customFormFields) {
-      for (const field of event.customFormFields) {
-        if (field.required && !formData.customFormResponses[field.label]) {
-          setError(`${field.label} is required`);
+    if (event.customForm) {
+      for (const field of event.customForm) {
+        if (field.isRequired && !formData.customFormResponses[field.fieldLabel]) {
+          setError(`${field.fieldLabel} is required`);
           return false;
         }
       }
@@ -206,7 +206,7 @@ const EventRegistrationPage = () => {
             Registration Successful!
           </h2>
           <p className="text-gray-600 mb-6">
-            You've successfully registered for {event.name}. Check your email for confirmation
+            You've successfully registered for {event.eventName}. Check your email for confirmation
             and QR code.
           </p>
           <div className="space-y-3">
@@ -247,7 +247,7 @@ const EventRegistrationPage = () => {
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-3xl mx-auto">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Register for {event.name}
+            Register for {event.eventName}
           </h1>
           <p className="text-gray-600 mb-8">
             Fill out the form below to complete your registration
@@ -261,68 +261,82 @@ const EventRegistrationPage = () => {
 
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Custom Form Fields */}
-            {event.customFormFields && event.customFormFields.length > 0 && (
+            {event.customForm && event.customForm.length > 0 && (
               <div className="card">
                 <h2 className="text-xl font-semibold text-gray-900 mb-4">
                   Additional Information
                 </h2>
                 <div className="space-y-4">
-                  {event.customFormFields.map((field, index) => (
+                  {event.customForm.map((field, index) => (
                     <div key={index}>
                       <label className="label">
-                        {field.label}
-                        {field.required && <span className="text-red-500 ml-1">*</span>}
+                        {field.fieldLabel}
+                        {field.isRequired && <span className="text-red-500 ml-1">*</span>}
                       </label>
 
-                      {field.type === 'text' && (
+                      {field.fieldType === 'text' && (
                         <input
                           type="text"
-                          required={field.required}
-                          value={formData.customFormResponses[field.label] || ''}
-                          onChange={(e) => handleCustomFieldChange(field.label, e.target.value)}
+                          required={field.isRequired}
+                          value={formData.customFormResponses[field.fieldLabel] || ''}
+                          onChange={(e) => handleCustomFieldChange(field.fieldLabel, e.target.value)}
                           className="input-field"
                         />
                       )}
 
-                      {field.type === 'number' && (
+                      {field.fieldType === 'number' && (
                         <input
                           type="number"
-                          required={field.required}
-                          value={formData.customFormResponses[field.label] || ''}
-                          onChange={(e) => handleCustomFieldChange(field.label, e.target.value)}
+                          required={field.isRequired}
+                          value={formData.customFormResponses[field.fieldLabel] || ''}
+                          onChange={(e) => handleCustomFieldChange(field.fieldLabel, e.target.value)}
                           className="input-field"
                         />
                       )}
 
-                      {field.type === 'textarea' && (
+                      {field.fieldType === 'textarea' && (
                         <textarea
-                          required={field.required}
-                          value={formData.customFormResponses[field.label] || ''}
-                          onChange={(e) => handleCustomFieldChange(field.label, e.target.value)}
+                          required={field.isRequired}
+                          value={formData.customFormResponses[field.fieldLabel] || ''}
+                          onChange={(e) => handleCustomFieldChange(field.fieldLabel, e.target.value)}
                           className="input-field"
                           rows={4}
                         />
                       )}
 
-                      {field.type === 'file' && (
+                      {field.fieldType === 'dropdown' && (
+                        <select
+                          required={field.isRequired}
+                          value={formData.customFormResponses[field.fieldLabel] || ''}
+                          onChange={(e) => handleCustomFieldChange(field.fieldLabel, e.target.value)}
+                          className="input-field"
+                        >
+                          <option value="">Select an option</option>
+                          {field.options?.map((opt, i) => (
+                            <option key={i} value={opt}>{opt}</option>
+                          ))}
+                        </select>
+                      )}
+
+                      {field.fieldType === 'file' && (
                         <div>
                           <input
                             type="file"
-                            required={field.required}
-                            onChange={(e) => handleFileChange(field.label, e.target.files[0])}
+                            required={field.isRequired}
+                            onChange={(e) => handleFileChange(field.fieldLabel, e.target.files[0])}
                             className="input-field"
                             accept=".jpg,.jpeg,.png,.pdf,.doc,.docx,.txt"
                           />
-                          {uploadProgress[field.label] === 'uploading' && (
+                          {uploadProgress[field.fieldLabel] === 'uploading' && (
                             <p className="text-sm text-blue-600 mt-1">Uploading...</p>
                           )}
-                          {uploadProgress[field.label] === 'success' && (
+                          {uploadProgress[field.fieldLabel] === 'success' && (
                             <p className="text-sm text-green-600 mt-1 flex items-center">
                               <CheckCircle className="w-4 h-4 mr-1" />
                               Uploaded successfully
                             </p>
                           )}
-                          {uploadProgress[field.label] === 'error' && (
+                          {uploadProgress[field.fieldLabel] === 'error' && (
                             <p className="text-sm text-red-600 mt-1">Upload failed</p>
                           )}
                           <p className="text-xs text-gray-500 mt-1">
@@ -349,7 +363,7 @@ const EventRegistrationPage = () => {
                       className="flex items-center justify-between p-4 border border-gray-200 rounded-lg"
                     >
                       <div className="flex-1">
-                        <p className="font-medium text-gray-900">{item.name}</p>
+                        <p className="font-medium text-gray-900">{item.itemName}</p>
                         <p className="text-sm text-primary-600 font-semibold">
                           {formatCurrency(item.price)} each
                         </p>
@@ -383,7 +397,7 @@ const EventRegistrationPage = () => {
               <div className="space-y-2 mb-4">
                 <div className="flex justify-between text-gray-700">
                   <span>Event:</span>
-                  <span className="font-medium">{event.name}</span>
+                  <span className="font-medium">{event.eventName}</span>
                 </div>
                 <div className="flex justify-between text-gray-700">
                   <span>Registration Fee:</span>
@@ -395,7 +409,7 @@ const EventRegistrationPage = () => {
                       .filter(item => item.quantity > 0)
                       .map((item, index) => (
                         <div key={index} className="flex justify-between text-gray-700">
-                          <span>{item.name} x {item.quantity}:</span>
+                          <span>{item.itemName} x {item.quantity}:</span>
                           <span className="font-medium">
                             {formatCurrency(item.price * item.quantity)}
                           </span>

@@ -5,7 +5,7 @@ import LoadingSpinner from '../../components/LoadingSpinner';
 import Alert from '../../components/Alert';
 import { 
   Calendar, Users, Ticket, TrendingUp, Plus, 
-  LogOut, User, LayoutDashboard 
+  LogOut, User, LayoutDashboard, UserCircle, PlayCircle 
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -26,7 +26,27 @@ const OrganizerDashboardPage = () => {
       setLoading(true);
       setError('');
       const response = await organizerAPI.getDashboard();
-      setStats(response.data.data);
+      const { events, analytics } = response.data;
+      
+      // Compute stats from raw events data
+      const totalEvents = events?.length || 0;
+      const publishedEvents = events?.filter(e => e.status === 'Published').length || 0;
+      
+      // Events by status breakdown
+      const statusCounts = {};
+      events?.forEach(e => {
+        statusCounts[e.status] = (statusCounts[e.status] || 0) + 1;
+      });
+      const eventsByStatus = Object.entries(statusCounts).map(([_id, count]) => ({ _id, count }));
+
+      setStats({
+        totalEvents,
+        publishedEvents,
+        totalRegistrations: analytics?.totalRegistrations || 0,
+        attendanceMarked: analytics?.totalAttendance || 0,
+        eventsByStatus,
+        events,
+      });
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to load dashboard');
     } finally {
@@ -67,9 +87,16 @@ const OrganizerDashboardPage = () => {
                 <Plus className="w-4 h-4 mr-2 inline" />
                 Create Event
               </button>
+              <button
+                onClick={() => navigate('/organizer/profile')}
+                className="btn-secondary"
+              >
+                <UserCircle className="w-4 h-4 mr-1 inline" />
+                Profile
+              </button>
               <div className="flex items-center gap-2 text-gray-700">
                 <User className="w-5 h-5" />
-                <span className="font-medium">{user?.name}</span>
+                <span className="font-medium">{user?.organizerName || user?.firstName}</span>
               </div>
               <button
                 onClick={handleLogout}
@@ -88,7 +115,7 @@ const OrganizerDashboardPage = () => {
         {/* Welcome Section */}
         <div className="mb-8">
           <h2 className="text-3xl font-bold text-gray-900 mb-2">
-            Welcome back, {user?.name}!
+            Welcome back, {user?.organizerName || user?.firstName}!
           </h2>
           <p className="text-gray-600">
             Here's an overview of your events and registrations

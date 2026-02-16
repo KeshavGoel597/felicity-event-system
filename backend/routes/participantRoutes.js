@@ -6,6 +6,8 @@ const {
   updatePreferences,
   changePassword,
   getDashboard,
+  getMyRegistrations,
+  getRegistrationById,
 } = require('../controllers/participantController');
 const { submitFeedback, getFeedbackStats } = require('../controllers/feedbackController');
 const { postMessage, getDiscussions, deleteMessage } = require('../controllers/discussionController');
@@ -17,6 +19,10 @@ router.use(authorize('participant'));
 
 // Dashboard route
 router.get('/dashboard', getDashboard);
+
+// Registrations route
+router.get('/registrations', getMyRegistrations);
+router.get('/registrations/:registrationId', getRegistrationById);
 
 // Profile routes
 router.get('/profile', getProfile);

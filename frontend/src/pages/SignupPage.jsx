@@ -7,9 +7,11 @@ const SignupPage = () => {
   const { signup } = useAuth();
 
   const [formData, setFormData] = useState({
-    name: '',
+    firstName: '',
+    lastName: '',
     email: '',
-    phone: '',
+    contactNumber: '',
+    participantType: 'Non-IIIT',
     password: '',
     confirmPassword: '',
   });
@@ -30,8 +32,12 @@ const SignupPage = () => {
   const validate = () => {
     const newErrors = {};
 
-    if (!formData.name.trim()) {
-      newErrors.name = 'Name is required';
+    if (!formData.firstName.trim()) {
+      newErrors.firstName = 'First name is required';
+    }
+
+    if (!formData.lastName.trim()) {
+      newErrors.lastName = 'Last name is required';
     }
 
     if (!formData.email.trim()) {
@@ -40,10 +46,10 @@ const SignupPage = () => {
       newErrors.email = 'Email is invalid';
     }
 
-    if (!formData.phone.trim()) {
-      newErrors.phone = 'Phone number is required';
-    } else if (!/^\d{10}$/.test(formData.phone)) {
-      newErrors.phone = 'Phone number must be 10 digits';
+    if (!formData.contactNumber.trim()) {
+      newErrors.contactNumber = 'Phone number is required';
+    } else if (!/^\d{10}$/.test(formData.contactNumber)) {
+      newErrors.contactNumber = 'Phone number must be 10 digits';
     }
 
     if (!formData.password) {
@@ -71,9 +77,11 @@ const SignupPage = () => {
     setLoading(true);
 
     const result = await signup({
-      name: formData.name,
+      firstName: formData.firstName,
+      lastName: formData.lastName,
       email: formData.email,
-      phone: formData.phone,
+      contactNumber: formData.contactNumber,
+      participantType: formData.participantType,
       password: formData.password,
     });
 
@@ -110,22 +118,42 @@ const SignupPage = () => {
           )}
 
           <div className="space-y-4">
-            {/* Name */}
-            <div>
-              <label htmlFor="name" className="label">
-                Full Name
-              </label>
-              <input
-                id="name"
-                name="name"
-                type="text"
-                required
-                value={formData.name}
-                onChange={handleChange}
-                className={`input-field ${errors.name ? 'input-error' : ''}`}
-                placeholder="John Doe"
-              />
-              {errors.name && <p className="error-message">{errors.name}</p>}
+            {/* First Name */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="firstName" className="label">
+                  First Name
+                </label>
+                <input
+                  id="firstName"
+                  name="firstName"
+                  type="text"
+                  required
+                  value={formData.firstName}
+                  onChange={handleChange}
+                  className={`input-field ${errors.firstName ? 'input-error' : ''}`}
+                  placeholder="John"
+                />
+                {errors.firstName && <p className="error-message">{errors.firstName}</p>}
+              </div>
+
+              {/* Last Name */}
+              <div>
+                <label htmlFor="lastName" className="label">
+                  Last Name
+                </label>
+                <input
+                  id="lastName"
+                  name="lastName"
+                  type="text"
+                  required
+                  value={formData.lastName}
+                  onChange={handleChange}
+                  className={`input-field ${errors.lastName ? 'input-error' : ''}`}
+                  placeholder="Doe"
+                />
+                {errors.lastName && <p className="error-message">{errors.lastName}</p>}
+              </div>
             </div>
 
             {/* Email */}
@@ -147,22 +175,39 @@ const SignupPage = () => {
               {errors.email && <p className="error-message">{errors.email}</p>}
             </div>
 
+            {/* Participant Type */}
+            <div>
+              <label htmlFor="participantType" className="label">
+                Participant Type
+              </label>
+              <select
+                id="participantType"
+                name="participantType"
+                value={formData.participantType}
+                onChange={handleChange}
+                className="input-field"
+              >
+                <option value="Non-IIIT">Non-IIIT</option>
+                <option value="IIIT">IIIT Student</option>
+              </select>
+            </div>
+
             {/* Phone */}
             <div>
-              <label htmlFor="phone" className="label">
+              <label htmlFor="contactNumber" className="label">
                 Phone Number
               </label>
               <input
-                id="phone"
-                name="phone"
+                id="contactNumber"
+                name="contactNumber"
                 type="tel"
                 required
-                value={formData.phone}
+                value={formData.contactNumber}
                 onChange={handleChange}
-                className={`input-field ${errors.phone ? 'input-error' : ''}`}
+                className={`input-field ${errors.contactNumber ? 'input-error' : ''}`}
                 placeholder="9876543210"
               />
-              {errors.phone && <p className="error-message">{errors.phone}</p>}
+              {errors.contactNumber && <p className="error-message">{errors.contactNumber}</p>}
             </div>
 
             {/* Password */}
@@ -220,10 +265,10 @@ const SignupPage = () => {
             <p className="text-sm text-gray-600">
               Are you an organizer?{' '}
               <Link
-                to="/organizer/signup"
+                to="/login"
                 className="font-medium text-primary-600 hover:text-primary-500"
               >
-                Request organizer access
+                Login with your organizer credentials
               </Link>
             </p>
           </div>

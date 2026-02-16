@@ -1,18 +1,9 @@
 import { Search, X } from 'lucide-react';
 
 const EventFilters = ({ filters, onFilterChange, onSearch, onReset }) => {
-  const categories = [
-    'Technical',
-    'Cultural',
-    'Sports',
-    'Workshop',
-    'Competition',
-    'Other',
-  ];
-
   const eventTypes = ['Normal', 'Merchandise'];
 
-  const statuses = ['Draft', 'Published', 'Completed', 'Cancelled'];
+  const eligibilityOptions = ['IIIT Only', 'Open to All'];
 
   const handleChange = (field, value) => {
     onFilterChange({ ...filters, [field]: value });
@@ -21,11 +12,11 @@ const EventFilters = ({ filters, onFilterChange, onSearch, onReset }) => {
   const hasActiveFilters = () => {
     return (
       filters.search ||
-      filters.category ||
       filters.eventType ||
-      filters.status ||
+      filters.eligibility ||
       filters.startDate ||
-      filters.endDate
+      filters.endDate ||
+      filters.followedOnly
     );
   };
 
@@ -46,24 +37,7 @@ const EventFilters = ({ filters, onFilterChange, onSearch, onReset }) => {
         </div>
 
         {/* Filter Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {/* Category Filter */}
-          <div>
-            <label className="label">Category</label>
-            <select
-              value={filters.category || ''}
-              onChange={(e) => handleChange('category', e.target.value)}
-              className="input-field"
-            >
-              <option value="">All Categories</option>
-              {categories.map((cat) => (
-                <option key={cat} value={cat}>
-                  {cat}
-                </option>
-              ))}
-            </select>
-          </div>
-
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
           {/* Event Type Filter */}
           <div>
             <label className="label">Event Type</label>
@@ -81,18 +55,18 @@ const EventFilters = ({ filters, onFilterChange, onSearch, onReset }) => {
             </select>
           </div>
 
-          {/* Status Filter */}
+          {/* Eligibility Filter */}
           <div>
-            <label className="label">Status</label>
+            <label className="label">Eligibility</label>
             <select
-              value={filters.status || ''}
-              onChange={(e) => handleChange('status', e.target.value)}
+              value={filters.eligibility || ''}
+              onChange={(e) => handleChange('eligibility', e.target.value)}
               className="input-field"
             >
-              <option value="">All Statuses</option>
-              {statuses.map((status) => (
-                <option key={status} value={status}>
-                  {status}
+              <option value="">All</option>
+              {eligibilityOptions.map((opt) => (
+                <option key={opt} value={opt}>
+                  {opt}
                 </option>
               ))}
             </select>
@@ -118,6 +92,19 @@ const EventFilters = ({ filters, onFilterChange, onSearch, onReset }) => {
               onChange={(e) => handleChange('endDate', e.target.value)}
               className="input-field"
             />
+          </div>
+
+          {/* Followed Clubs Only */}
+          <div className="flex items-end">
+            <label className="flex items-center gap-2 cursor-pointer pb-2">
+              <input
+                type="checkbox"
+                checked={filters.followedOnly || false}
+                onChange={(e) => handleChange('followedOnly', e.target.checked)}
+                className="w-4 h-4 text-primary-600 rounded"
+              />
+              <span className="text-sm font-medium text-gray-700">Followed Clubs Only</span>
+            </label>
           </div>
         </div>
 

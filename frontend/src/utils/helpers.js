@@ -119,7 +119,9 @@ export const getStatusBadgeClass = (status) => {
   const statusMap = {
     Draft: 'badge-warning',
     Published: 'badge-info',
+    Ongoing: 'badge-info',
     Completed: 'badge-success',
+    Closed: 'badge-danger',
     Cancelled: 'badge-danger',
   };
   return `badge ${statusMap[status] || 'badge-info'}`;
@@ -133,7 +135,10 @@ export const getStatusBadgeClass = (status) => {
 export const getRegistrationStatusBadgeClass = (status) => {
   const statusMap = {
     Registered: 'badge-success',
+    Pending: 'badge-warning',
+    Completed: 'badge-info',
     Cancelled: 'badge-danger',
+    Rejected: 'badge-danger',
     Attended: 'badge-info',
   };
   return `badge ${statusMap[status] || 'badge-info'}`;

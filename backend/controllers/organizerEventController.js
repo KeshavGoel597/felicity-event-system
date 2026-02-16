@@ -103,11 +103,11 @@ const updateEvent = async (req, res) => {
         'registrationDeadline',
         'eventStartDate',
         'eventEndDate',
-        'venue',
+        'location',
         'registrationFee',
         'registrationLimit',
         'customForm',
-        'merchandiseDetails',
+        'merchandiseItems',
         'eventBanner',
       ];
 
@@ -253,7 +253,7 @@ const publishEvent = async (req, res) => {
         });
       }
     } else if (event.eventType === 'Merchandise') {
-      if (!event.merchandiseDetails || event.merchandiseDetails.length === 0) {
+      if (!event.merchandiseItems || event.merchandiseItems.length === 0) {
         return res.status(400).json({
           success: false,
           message: 'Merchandise events must have at least one merchandise item',
@@ -261,15 +261,15 @@ const publishEvent = async (req, res) => {
       }
 
       // Validate each merchandise item
-      for (const item of event.merchandiseDetails) {
-        if (!item.itemName || item.price === undefined || item.stock === undefined) {
+      for (const item of event.merchandiseItems) {
+        if (!item.itemName || item.price === undefined || item.stockQuantity === undefined) {
           return res.status(400).json({
             success: false,
             message: 'All merchandise items must have name, price, and stock',
           });
         }
 
-        if (item.price < 0 || item.stock < 0) {
+        if (item.price < 0 || item.stockQuantity < 0) {
           return res.status(400).json({
             success: false,
             message: 'Price and stock cannot be negative',

@@ -182,7 +182,7 @@ const DiscussionForumPage = () => {
                           : 'text-gray-600'
                       }`}>
                         {discussion.isOrganizer && '👑 '}
-                        {discussion.participant.name}
+                        {discussion.participant.firstName ? `${discussion.participant.firstName} ${discussion.participant.lastName || ''}`.trim() : discussion.participant.organizerName || 'Unknown'}
                         {discussion.isOrganizer && ' (Organizer)'}
                       </p>
                       {discussion.participant._id === currentUser?.id && (

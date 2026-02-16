@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Users, UserCheck, Calendar, Activity, LogOut } from 'lucide-react';
 import { adminAPI } from '../../services/api';
 import LoadingSpinner from '../../components/LoadingSpinner';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../contexts/AuthContext';
 
 const AdminDashboardPage = () => {
   const navigate = useNavigate();
@@ -24,7 +24,12 @@ const AdminDashboardPage = () => {
     try {
       setLoading(true);
       const response = await adminAPI.getDashboard();
-      setStats(response.data.data);
+      setStats({
+        totalParticipants: response.data.totalParticipants || 0,
+        totalOrganizers: response.data.totalOrganizers || 0,
+        totalEvents: response.data.totalEvents || 0,
+        recentActivities: response.data.recentActivities || [],
+      });
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
     } finally {
@@ -84,13 +89,27 @@ const AdminDashboardPage = () => {
         <div className="container mx-auto px-4 py-4">
           <div className="flex justify-between items-center">
             <h1 className="text-2xl font-bold text-gray-900">Admin Dashboard</h1>
-            <button
-              onClick={handleLogout}
-              className="flex items-center gap-2 px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-            >
-              <LogOut className="w-4 h-4" />
-              Logout
-            </button>
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => navigate('/admin/organizers')}
+                className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors font-medium"
+              >
+                Manage Organizers
+              </button>
+              <button
+                onClick={() => navigate('/admin/password-reset-requests')}
+                className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors font-medium"
+              >
+                Password Resets
+              </button>
+              <button
+                onClick={handleLogout}
+                className="flex items-center gap-2 px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+              >
+                <LogOut className="w-4 h-4" />
+                Logout
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -151,6 +170,16 @@ const AdminDashboardPage = () => {
               <div>
                 <div className="font-semibold text-gray-900">View All Events</div>
                 <div className="text-sm text-gray-600">Monitor all platform events</div>
+              </div>
+            </button>
+            <button
+              onClick={() => navigate('/admin/password-reset-requests')}
+              className="flex items-center gap-3 p-4 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors text-left"
+            >
+              <Activity className="w-6 h-6 text-blue-600" />
+              <div>
+                <div className="font-semibold text-gray-900">Password Reset Requests</div>
+                <div className="text-sm text-gray-600">Review organizer password resets</div>
               </div>
             </button>
           </div>

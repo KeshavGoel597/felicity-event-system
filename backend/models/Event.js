@@ -167,4 +167,46 @@ eventSchema.index({ status: 1, eventStartDate: 1 });
 eventSchema.index({ organizerId: 1 });
 eventSchema.index({ eventType: 1 });
 
+/**
+ * Auto-compute event status based on dates.
+ * - Draft stays Draft (manual publish required)
+ * - Published → Ongoing if eventStartDate <= now
+ * - Ongoing → Completed if eventEndDate <= now
+ * - Closed stays Closed (manual override)
+ */
+eventSchema.methods.computeStatus = function () {
+  if (this.status === 'Draft' || this.status === 'Closed') return this.status;
+  const now = new Date();
+  if (this.eventEndDate && now >= this.eventEndDate) {
+    return 'Completed';
+  }
+  if (this.eventStartDate && now >= this.eventStartDate) {
+    return 'Ongoing';
+  }
+  return this.status; // remains Published
+};
+
+/**
+ * Static helper: auto-update statuses for a set of events in-place.
+ */
+eventSchema.statics.autoUpdateStatuses = async function (events) {
+  const bulkOps = [];
+  for (const event of events) {
+    const newStatus = event.computeStatus ? event.computeStatus() : null;
+    if (newStatus && newStatus !== event.status) {
+      event.status = newStatus;
+      bulkOps.push({
+        updateOne: {
+          filter: { _id: event._id },
+          update: { $set: { status: newStatus } },
+        },
+      });
+    }
+  }
+  if (bulkOps.length > 0) {
+    await mongoose.model('Event').bulkWrite(bulkOps);
+  }
+  return events;
+};
+
 module.exports = mongoose.model('Event', eventSchema);

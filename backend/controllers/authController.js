@@ -73,16 +73,21 @@ const participantSignup = async (req, res) => {
     res.status(201).json({
       success: true,
       message: 'Account created successfully',
-      token,
-      user: {
-        id: user._id,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        email: user.email,
-        participantType: user.participantType,
-        collegeName: user.collegeName,
-        contactNumber: user.contactNumber,
-        role: user.role,
+      data: {
+        token,
+        user: {
+          id: user._id,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          email: user.email,
+          participantType: user.participantType,
+          collegeName: user.collegeName,
+          contactNumber: user.contactNumber,
+          areasOfInterest: user.areasOfInterest,
+          followedClubs: user.followedClubs,
+          role: user.role,
+          isOnboarded: user.isOnboarded,
+        },
       },
     });
   } catch (error) {
@@ -149,18 +154,21 @@ const participantLogin = async (req, res) => {
     res.status(200).json({
       success: true,
       message: 'Login successful',
-      token,
-      user: {
-        id: user._id,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        email: user.email,
-        participantType: user.participantType,
-        collegeName: user.collegeName,
-        contactNumber: user.contactNumber,
-        areasOfInterest: user.areasOfInterest,
-        followedClubs: user.followedClubs,
-        role: user.role,
+      data: {
+        token,
+        user: {
+          id: user._id,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          email: user.email,
+          participantType: user.participantType,
+          collegeName: user.collegeName,
+          contactNumber: user.contactNumber,
+          areasOfInterest: user.areasOfInterest,
+          followedClubs: user.followedClubs,
+          role: user.role,
+          isOnboarded: user.isOnboarded,
+        },
       },
     });
   } catch (error) {
@@ -227,18 +235,20 @@ const organizerLogin = async (req, res) => {
     res.status(200).json({
       success: true,
       message: 'Login successful',
-      token,
-      user: {
-        id: organizer._id,
-        organizerName: organizer.organizerName,
-        category: organizer.category,
-        description: organizer.description,
-        loginEmail: organizer.loginEmail,
-        contactEmail: organizer.contactEmail,
-        contactNumber: organizer.contactNumber,
-        discordWebhook: organizer.discordWebhook,
-        role: organizer.role,
-        isApproved: organizer.isApproved,
+      data: {
+        token,
+        user: {
+          id: organizer._id,
+          organizerName: organizer.organizerName,
+          category: organizer.category,
+          description: organizer.description,
+          loginEmail: organizer.loginEmail,
+          contactEmail: organizer.contactEmail,
+          contactNumber: organizer.contactNumber,
+          discordWebhook: organizer.discordWebhook,
+          role: organizer.role,
+          isApproved: organizer.isApproved,
+        },
       },
     });
   } catch (error) {
@@ -295,11 +305,13 @@ const adminLogin = async (req, res) => {
     res.status(200).json({
       success: true,
       message: 'Login successful',
-      token,
-      user: {
-        id: admin._id,
-        email: admin.email,
-        role: admin.role,
+      data: {
+        token,
+        user: {
+          id: admin._id,
+          email: admin.email,
+          role: admin.role,
+        },
       },
     });
   } catch (error) {
@@ -312,9 +324,136 @@ const adminLogin = async (req, res) => {
   }
 };
 
+/**
+ * @desc    Complete participant onboarding (set preferences)
+ * @route   POST /api/auth/onboarding
+ * @access  Private (Participant only)
+ */
+const completeOnboarding = async (req, res) => {
+  try {
+    const { areasOfInterest, followedClubs } = req.body;
+
+    const user = await User.findById(req.user._id);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found',
+      });
+    }
+
+    // Update preferences
+    if (areasOfInterest && Array.isArray(areasOfInterest)) {
+      user.areasOfInterest = areasOfInterest;
+    }
+
+    if (followedClubs && Array.isArray(followedClubs)) {
+      user.followedClubs = followedClubs;
+    }
+
+    // Mark as onboarded
+    user.isOnboarded = true;
+    await user.save();
+
+    const updatedUser = await User.findById(user._id).populate('followedClubs', 'organizerName category');
+
+    res.status(200).json({
+      success: true,
+      message: 'Onboarding completed successfully',
+      data: {
+        id: updatedUser._id,
+        firstName: updatedUser.firstName,
+        lastName: updatedUser.lastName,
+        email: updatedUser.email,
+        participantType: updatedUser.participantType,
+        collegeName: updatedUser.collegeName,
+        contactNumber: updatedUser.contactNumber,
+        areasOfInterest: updatedUser.areasOfInterest,
+        followedClubs: updatedUser.followedClubs,
+        role: updatedUser.role,
+        isOnboarded: updatedUser.isOnboarded,
+      },
+    });
+  } catch (error) {
+    console.error('Onboarding error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error during onboarding',
+      error: error.message,
+    });
+  }
+};
+
+/**
+ * @desc    Get current logged-in user profile
+ * @route   GET /api/auth/me
+ * @access  Private
+ */
+const getMe = async (req, res) => {
+  try {
+    let userData;
+
+    if (req.user.role === 'participant') {
+      const user = await User.findById(req.user._id)
+        .select('-password')
+        .populate('followedClubs', 'organizerName category');
+
+      userData = {
+        id: user._id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        participantType: user.participantType,
+        collegeName: user.collegeName,
+        contactNumber: user.contactNumber,
+        areasOfInterest: user.areasOfInterest,
+        followedClubs: user.followedClubs,
+        role: user.role,
+        isOnboarded: user.isOnboarded,
+      };
+    } else if (req.user.role === 'organizer') {
+      const Organizer = require('../models/Organizer');
+      const organizer = await Organizer.findById(req.user._id).select('-password');
+
+      userData = {
+        id: organizer._id,
+        organizerName: organizer.organizerName,
+        category: organizer.category,
+        description: organizer.description,
+        loginEmail: organizer.loginEmail,
+        contactEmail: organizer.contactEmail,
+        contactNumber: organizer.contactNumber,
+        discordWebhook: organizer.discordWebhook,
+        role: organizer.role,
+        isApproved: organizer.isApproved,
+      };
+    } else if (req.user.role === 'admin') {
+      userData = {
+        id: req.user._id,
+        email: req.user.email,
+        role: req.user.role,
+      };
+    }
+
+    res.status(200).json({
+      success: true,
+      data: userData,
+    });
+  } catch (error) {
+    console.error('Get me error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error',
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   participantSignup,
   participantLogin,
   organizerLogin,
   adminLogin,
+  completeOnboarding,
+  getMe,
 };

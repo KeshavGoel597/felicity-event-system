@@ -35,7 +35,7 @@ const QRScannerPage = () => {
     try {
       setLoading(true);
       const response = await organizerAPI.getEventById(eventId);
-      setEvent(response.data.data);
+      setEvent(response.data.event);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to load event');
     } finally {
@@ -236,11 +236,8 @@ const QRScannerPage = () => {
                     </h3>
                     {scanResult.data && (
                       <div className="mt-2 space-y-1 text-sm">
-                        <p><strong>Name:</strong> {scanResult.data.participantName || scanResult.data.name}</p>
+                        <p><strong>Name:</strong> {scanResult.data.participantName}</p>
                         <p><strong>Email:</strong> {scanResult.data.email}</p>
-                        {scanResult.data.rollNumber && (
-                          <p><strong>Roll Number:</strong> {scanResult.data.rollNumber}</p>
-                        )}
                         {scanResult.data.markedAt && (
                           <p><strong>Marked At:</strong> {new Date(scanResult.data.markedAt).toLocaleString()}</p>
                         )}

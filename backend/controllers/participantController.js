@@ -315,10 +315,108 @@ const getDashboard = async (req, res) => {
   }
 };
 
+/**
+ * @desc    Get all registrations for the logged-in participant
+ * @route   GET /api/participant/registrations
+ * @access  Private (Participant only)
+ */
+const getMyRegistrations = async (req, res) => {
+  try {
+    const registrations = await Registration.find({
+      participantId: req.user._id,
+    })
+      .populate({
+        path: 'eventId',
+        select: 'eventName eventType eventStartDate eventEndDate location organizerId registrationFee',
+        populate: {
+          path: 'organizerId',
+          select: 'organizerName',
+        },
+      })
+      .sort({ registrationDate: -1 });
+
+    const data = registrations.map((reg) => ({
+      _id: reg._id,
+      event: reg.eventId ? {
+        _id: reg.eventId._id,
+        eventName: reg.eventId.eventName,
+        eventType: reg.eventId.eventType,
+        eventStartDate: reg.eventId.eventStartDate,
+        eventEndDate: reg.eventId.eventEndDate,
+        location: reg.eventId.location,
+        registrationFee: reg.eventId.registrationFee,
+        organizerName: reg.eventId.organizerId?.organizerName || 'Unknown',
+      } : null,
+      registrationType: reg.registrationType,
+      registrationDate: reg.registrationDate,
+      participationStatus: reg.participationStatus,
+      paymentStatus: reg.paymentStatus,
+      ticketId: reg.ticketId,
+      qrCode: reg.qrCode,
+      merchandiseDetails: reg.merchandiseDetails,
+      attendanceMarked: reg.attendanceMarked,
+    }));
+
+    res.status(200).json({
+      success: true,
+      data,
+    });
+  } catch (error) {
+    console.error('Get my registrations error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error',
+      error: error.message,
+    });
+  }
+};
+
+/**
+ * @desc    Get a single registration by ID
+ * @route   GET /api/participant/registrations/:registrationId
+ * @access  Private (Participant only)
+ */
+const getRegistrationById = async (req, res) => {
+  try {
+    const registration = await Registration.findOne({
+      _id: req.params.registrationId,
+      participantId: req.user._id,
+    }).populate({
+      path: 'eventId',
+      select: 'eventName eventType eventStartDate eventEndDate location organizerId registrationFee',
+      populate: {
+        path: 'organizerId',
+        select: 'organizerName',
+      },
+    });
+
+    if (!registration) {
+      return res.status(404).json({
+        success: false,
+        message: 'Registration not found',
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: registration,
+    });
+  } catch (error) {
+    console.error('Get registration by ID error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error',
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   getProfile,
   updateProfile,
   updatePreferences,
   changePassword,
   getDashboard,
+  getMyRegistrations,
+  getRegistrationById,
 };

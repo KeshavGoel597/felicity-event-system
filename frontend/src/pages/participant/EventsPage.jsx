@@ -6,7 +6,7 @@ import EventFilters from '../../components/EventFilters';
 import Pagination from '../../components/Pagination';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import Alert from '../../components/Alert';
-import { LogOut, User } from 'lucide-react';
+import { LogOut, User, LayoutDashboard, Heart, UserCircle } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
 const ParticipantEventsPage = () => {
@@ -20,11 +20,11 @@ const ParticipantEventsPage = () => {
   
   const [filters, setFilters] = useState({
     search: '',
-    category: '',
     eventType: '',
-    status: 'Published', // Default to only show published events
+    eligibility: '',
     startDate: '',
     endDate: '',
+    followedOnly: false,
   });
 
   const [pagination, setPagination] = useState({
@@ -43,25 +43,40 @@ const ParticipantEventsPage = () => {
       const params = {
         page,
         limit: pagination.limit,
-        ...filters,
+        search: filters.search || undefined,
+        eventType: filters.eventType || undefined,
+        eligibility: filters.eligibility || undefined,
+        dateFrom: filters.startDate || undefined,
+        dateTo: filters.endDate || undefined,
+        followedOnly: filters.followedOnly ? 'true' : undefined,
+        userId: user?.id || undefined,
       };
 
-      // Remove empty filters
+      // Remove undefined params
       Object.keys(params).forEach(key => {
-        if (params[key] === '' || params[key] === null || params[key] === undefined) {
+        if (params[key] === undefined) {
           delete params[key];
         }
       });
 
       const response = await participantAPI.getEvents(params);
-      const { events: fetchedEvents, pagination: paginationData } = response.data.data;
+      const data = response.data;
 
-      setEvents(fetchedEvents);
+      // Backend returns { success, count, events } without pagination
+      const fetchedEvents = data.events || [];
+      
+      // Client-side pagination
+      const totalEvents = fetchedEvents.length;
+      const totalPages = Math.ceil(totalEvents / pagination.limit) || 1;
+      const startIndex = (page - 1) * pagination.limit;
+      const paginatedEvents = fetchedEvents.slice(startIndex, startIndex + pagination.limit);
+
+      setEvents(paginatedEvents);
       setPagination({
-        currentPage: paginationData.currentPage,
-        totalPages: paginationData.totalPages,
-        totalEvents: paginationData.totalEvents,
-        limit: paginationData.limit,
+        currentPage: page,
+        totalPages,
+        totalEvents,
+        limit: pagination.limit,
       });
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to fetch events');
@@ -98,11 +113,11 @@ const ParticipantEventsPage = () => {
   const handleReset = () => {
     setFilters({
       search: '',
-      category: '',
       eventType: '',
-      status: 'Published',
+      eligibility: '',
       startDate: '',
       endDate: '',
+      followedOnly: false,
     });
     setTimeout(() => fetchEvents(1), 0);
   };
@@ -133,14 +148,29 @@ const ParticipantEventsPage = () => {
             </div>
             <div className="flex items-center gap-4">
               <button
-                onClick={() => navigate('/participant/registrations')}
+                onClick={() => navigate('/participant/dashboard')}
                 className="btn-secondary"
               >
-                My Registrations
+                <LayoutDashboard className="w-4 h-4 mr-1 inline" />
+                Dashboard
+              </button>
+              <button
+                onClick={() => navigate('/participant/clubs')}
+                className="btn-secondary"
+              >
+                <Heart className="w-4 h-4 mr-1 inline" />
+                Clubs
+              </button>
+              <button
+                onClick={() => navigate('/participant/profile')}
+                className="btn-secondary"
+              >
+                <UserCircle className="w-4 h-4 mr-1 inline" />
+                Profile
               </button>
               <div className="flex items-center gap-2 text-gray-700">
                 <User className="w-5 h-5" />
-                <span className="font-medium">{user?.name}</span>
+                <span className="font-medium">{user?.firstName} {user?.lastName}</span>
               </div>
               <button
                 onClick={handleLogout}

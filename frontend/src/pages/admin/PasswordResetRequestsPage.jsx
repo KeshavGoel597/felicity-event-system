@@ -194,10 +194,10 @@ const PasswordResetRequestsPage = () => {
                   <div className="flex flex-col md:flex-row gap-4 justify-between">
                     <div className="flex-1">
                       <h3 className="font-semibold text-lg text-gray-900 mb-1">
-                        {request.organizer.name}
+                        {request.organizer.organizerName}
                       </h3>
-                      <p className="text-sm text-gray-600 mb-1">{request.organizer.email}</p>
-                      <p className="text-sm text-gray-600 mb-3">{request.organizer.organizationName}</p>
+                      <p className="text-sm text-gray-600 mb-1">{request.organizer.loginEmail}</p>
+                      <p className="text-sm text-gray-600 mb-3">{request.organizer.category}</p>
                       
                       <div className="bg-gray-50 rounded-lg p-3 mb-2">
                         <p className="text-xs text-gray-500 mb-1">Reason for Reset:</p>
@@ -247,7 +247,7 @@ const PasswordResetRequestsPage = () => {
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
-                        <h3 className="font-semibold text-gray-900">{request.organizer.name}</h3>
+                        <h3 className="font-semibold text-gray-900">{request.organizer.organizerName}</h3>
                         {request.status === 'Approved' ? (
                           <span className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full">
                             Approved
@@ -258,7 +258,7 @@ const PasswordResetRequestsPage = () => {
                           </span>
                         )}
                       </div>
-                      <p className="text-sm text-gray-600 mb-2">{request.organizer.email}</p>
+                      <p className="text-sm text-gray-600 mb-2">{request.organizer.loginEmail}</p>
                       
                       {request.rejectionReason && (
                         <div className="bg-red-50 rounded p-2 mb-2">

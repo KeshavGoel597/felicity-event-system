@@ -5,7 +5,7 @@ const Registration = require('../models/Registration');
 // @desc    Post a message in event discussion
 // @route   POST /api/participant/events/:eventId/discussions
 // @access  Private (Participant only - must be registered)
-exports.postMessage = async (req, res) => {
+const postMessage = async (req, res) => {
   try {
     const { eventId } = req.params;
     const { message } = req.body;
@@ -28,8 +28,8 @@ exports.postMessage = async (req, res) => {
 
     // Check if participant is registered for this event
     const registration = await Registration.findOne({
-      event: eventId,
-      participant: req.user._id,
+      eventId: eventId,
+      participantId: req.user._id,
     });
 
     if (!registration) {
@@ -48,7 +48,7 @@ exports.postMessage = async (req, res) => {
     });
 
     // Populate participant details before sending response
-    await discussion.populate('participant', 'name email');
+    await discussion.populate('participant', 'firstName lastName email');
 
     res.status(201).json({
       success: true,
@@ -68,14 +68,14 @@ exports.postMessage = async (req, res) => {
 // @desc    Get all messages for an event
 // @route   GET /api/participant/events/:eventId/discussions
 // @access  Private (Participant only - must be registered)
-exports.getDiscussions = async (req, res) => {
+const getDiscussions = async (req, res) => {
   try {
     const { eventId } = req.params;
 
     // Check if participant is registered
     const registration = await Registration.findOne({
-      event: eventId,
-      participant: req.user._id,
+      eventId: eventId,
+      participantId: req.user._id,
     });
 
     if (!registration) {
@@ -87,7 +87,7 @@ exports.getDiscussions = async (req, res) => {
 
     // Get all discussions
     const discussions = await Discussion.find({ event: eventId })
-      .populate('participant', 'name email')
+      .populate('participant', 'firstName lastName email')
       .sort({ isPinned: -1, createdAt: 1 }); // Pinned messages first, then oldest first
 
     res.status(200).json({
@@ -108,7 +108,7 @@ exports.getDiscussions = async (req, res) => {
 // @desc    Post message as organizer
 // @route   POST /api/organizer/events/:eventId/discussions
 // @access  Private (Organizer only)
-exports.postOrganizerMessage = async (req, res) => {
+const postOrganizerMessage = async (req, res) => {
   try {
     const { eventId } = req.params;
     const { message } = req.body;
@@ -145,7 +145,7 @@ exports.postOrganizerMessage = async (req, res) => {
     });
 
     // Populate with organizer details
-    await discussion.populate('participant', 'name email');
+    await discussion.populate('participant', 'organizerName loginEmail');
 
     res.status(201).json({
       success: true,
@@ -165,7 +165,7 @@ exports.postOrganizerMessage = async (req, res) => {
 // @desc    Get all discussions for organizer's event
 // @route   GET /api/organizer/events/:eventId/discussions
 // @access  Private (Organizer only)
-exports.getOrganizerDiscussions = async (req, res) => {
+const getOrganizerDiscussions = async (req, res) => {
   try {
     const { eventId } = req.params;
 
@@ -187,7 +187,7 @@ exports.getOrganizerDiscussions = async (req, res) => {
 
     // Get all discussions
     const discussions = await Discussion.find({ event: eventId })
-      .populate('participant', 'name email')
+      .populate('participant', 'firstName lastName email')
       .sort({ isPinned: -1, createdAt: 1 }); // Pinned messages first
 
     res.status(200).json({
@@ -208,7 +208,7 @@ exports.getOrganizerDiscussions = async (req, res) => {
 // @desc    Delete a discussion message
 // @route   DELETE /api/participant/discussions/:discussionId
 // @access  Private (Participant - own messages only)
-exports.deleteMessage = async (req, res) => {
+const deleteMessage = async (req, res) => {
   try {
     const { discussionId } = req.params;
 
@@ -247,7 +247,7 @@ exports.deleteMessage = async (req, res) => {
 // @desc    Pin a message (Organizer only)
 // @route   PUT /api/organizer/discussions/:discussionId/pin
 // @access  Private (Organizer only)
-exports.pinMessage = async (req, res) => {
+const pinMessage = async (req, res) => {
   try {
     const { discussionId } = req.params;
 

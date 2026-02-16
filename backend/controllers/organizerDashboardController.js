@@ -15,6 +15,9 @@ const getDashboard = async (req, res) => {
       .select('eventName eventType status eventStartDate eventEndDate registrationFee')
       .sort({ createdAt: -1 });
 
+    // Auto-compute event statuses based on dates
+    await Event.autoUpdateStatuses(events);
+
     // Calculate analytics for COMPLETED events only
     const completedEvents = await Event.find({
       organizerId: req.user._id,

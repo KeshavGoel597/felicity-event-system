@@ -31,7 +31,7 @@ const PaymentApprovalsPage = () => {
         organizerAPI.getPendingPayments(eventId),
       ]);
       
-      setEvent(eventRes.data.data);
+      setEvent(eventRes.data.event);
       setPaymentData(paymentsRes.data);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to load data');

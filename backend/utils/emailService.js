@@ -2,7 +2,7 @@ const nodemailer = require('nodemailer');
 
 // Create email transporter
 const createTransporter = () => {
-  return nodemailer.createTransporter({
+  return nodemailer.createTransport({
     host: process.env.EMAIL_HOST,
     port: process.env.EMAIL_PORT,
     secure: false, // true for 465, false for other ports
@@ -152,6 +152,52 @@ const sendTicketEmail = async (options) => {
   }
 };
 
+/**
+ * Send a generic email
+ * @param {String} to - Recipient email address
+ * @param {String} subject - Email subject
+ * @param {String} text - Plain text body
+ * @param {String} html - HTML body (optional)
+ */
+const sendEmail = async (to, subject, text, html) => {
+  try {
+    // Support both (to, subject, text, html) and ({ to, subject, html }) call signatures
+    let recipientEmail, emailSubject, emailText, emailHtml;
+
+    if (typeof to === 'object') {
+      // Called as sendEmail({ to, subject, text, html })
+      recipientEmail = to.to;
+      emailSubject = to.subject;
+      emailText = to.text || '';
+      emailHtml = to.html || '';
+    } else {
+      // Called as sendEmail(to, subject, text, html)
+      recipientEmail = to;
+      emailSubject = subject;
+      emailText = text || '';
+      emailHtml = html || '';
+    }
+
+    const transporter = createTransporter();
+
+    const mailOptions = {
+      from: `"Felicity Events" <${process.env.EMAIL_USER}>`,
+      to: recipientEmail,
+      subject: emailSubject,
+      text: emailText,
+      html: emailHtml,
+    };
+
+    const info = await transporter.sendMail(mailOptions);
+    console.log(`✅ Email sent to ${recipientEmail}: ${info.messageId}`);
+    return { success: true, messageId: info.messageId };
+  } catch (error) {
+    console.error(`❌ Email sending failed: ${error.message}`);
+    return { success: false, error: error.message };
+  }
+};
+
 module.exports = {
   sendTicketEmail,
+  sendEmail,
 };

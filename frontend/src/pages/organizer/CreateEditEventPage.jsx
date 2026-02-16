@@ -15,22 +15,22 @@ const CreateEditEventPage = () => {
   const [error, setError] = useState('');
 
   const [formData, setFormData] = useState({
-    name: '',
-    description: '',
+    eventName: '',
+    eventDescription: '',
     eventType: 'Normal',
-    category: '',
-    eventDate: '',
+    eligibility: 'Open to All',
+    eventStartDate: '',
+    eventEndDate: '',
     registrationDeadline: '',
     location: '',
-    maxParticipants: '',
+    registrationLimit: '',
     registrationFee: 0,
-    rules: '',
-    bannerImage: '',
-    customFormFields: [],
+    eventTags: [],
+    customForm: [],
     merchandiseItems: [],
   });
 
-  const categories = ['Technical', 'Cultural', 'Sports', 'Workshop', 'Competition', 'Other'];
+  const eligibilityOptions = ['Open to All', 'IIIT Only'];
 
   useEffect(() => {
     if (isEditMode) {
@@ -42,14 +42,15 @@ const CreateEditEventPage = () => {
     try {
       setLoading(true);
       const response = await organizerAPI.getEventById(eventId);
-      const event = response.data.data;
+      const event = response.data.event;
       
       // Format dates for input fields
       setFormData({
         ...event,
-        eventDate: new Date(event.eventDate).toISOString().slice(0, 16),
-        registrationDeadline: new Date(event.registrationDeadline).toISOString().slice(0, 16),
-        customFormFields: event.customFormFields || [],
+        eventStartDate: event.eventStartDate ? new Date(event.eventStartDate).toISOString().slice(0, 16) : '',
+        eventEndDate: event.eventEndDate ? new Date(event.eventEndDate).toISOString().slice(0, 16) : '',
+        registrationDeadline: event.registrationDeadline ? new Date(event.registrationDeadline).toISOString().slice(0, 16) : '',
+        customForm: event.customForm || [],
         merchandiseItems: event.merchandiseItems || [],
       });
     } catch (err) {
@@ -71,9 +72,9 @@ const CreateEditEventPage = () => {
   const addCustomField = () => {
     setFormData(prev => ({
       ...prev,
-      customFormFields: [
-        ...prev.customFormFields,
-        { label: '', type: 'text', required: false },
+      customForm: [
+        ...prev.customForm,
+        { fieldLabel: '', fieldType: 'text', isRequired: false, options: [], order: prev.customForm.length },
       ],
     }));
   };
@@ -81,7 +82,7 @@ const CreateEditEventPage = () => {
   const updateCustomField = (index, field, value) => {
     setFormData(prev => ({
       ...prev,
-      customFormFields: prev.customFormFields.map((item, i) =>
+      customForm: prev.customForm.map((item, i) =>
         i === index ? { ...item, [field]: value } : item
       ),
     }));
@@ -90,7 +91,7 @@ const CreateEditEventPage = () => {
   const removeCustomField = (index) => {
     setFormData(prev => ({
       ...prev,
-      customFormFields: prev.customFormFields.filter((_, i) => i !== index),
+      customForm: prev.customForm.filter((_, i) => i !== index),
     }));
   };
 
@@ -100,7 +101,7 @@ const CreateEditEventPage = () => {
       ...prev,
       merchandiseItems: [
         ...prev.merchandiseItems,
-        { name: '', description: '', price: 0 },
+        { itemName: '', price: 0, stockQuantity: 0, sizes: [], colors: [], variants: [] },
       ],
     }));
   };
@@ -109,7 +110,7 @@ const CreateEditEventPage = () => {
     setFormData(prev => ({
       ...prev,
       merchandiseItems: prev.merchandiseItems.map((item, i) =>
-        i === index ? { ...item, [field]: field === 'price' ? Number(value) : value } : item
+        i === index ? { ...item, [field]: ['price', 'stockQuantity'].includes(field) ? Number(value) : value } : item
       ),
     }));
   };
@@ -122,38 +123,16 @@ const CreateEditEventPage = () => {
   };
 
   const validateForm = () => {
-    if (!formData.name.trim()) {
+    if (!formData.eventName?.trim()) {
       setError('Event name is required');
       return false;
     }
-    if (!formData.description.trim()) {
-      setError('Description is required');
+    if (!formData.eventType) {
+      setError('Event type is required');
       return false;
     }
-    if (!formData.category) {
-      setError('Category is required');
-      return false;
-    }
-    if (!formData.eventDate) {
-      setError('Event date is required');
-      return false;
-    }
-    if (!formData.registrationDeadline) {
-      setError('Registration deadline is required');
-      return false;
-    }
-    if (!formData.location.trim()) {
-      setError('Location is required');
-      return false;
-    }
-    if (!formData.maxParticipants || formData.maxParticipants < 1) {
-      setError('Max participants must be at least 1');
-      return false;
-    }
-    if (formData.eventType === 'Merchandise' && formData.merchandiseItems.length === 0) {
-      setError('At least one merchandise item is required for Merchandise events');
-      return false;
-    }
+    // For creating, we only need name and type (draft mode)
+    // Full validation happens on publish (backend)
     return true;
   };
 
@@ -167,12 +146,25 @@ const CreateEditEventPage = () => {
       setSubmitting(true);
 
       const submitData = {
-        ...formData,
-        customFormFields: formData.customFormFields.filter(f => f.label.trim()),
-        merchandiseItems: formData.eventType === 'Merchandise' 
-          ? formData.merchandiseItems.filter(m => m.name.trim())
-          : undefined,
+        eventName: formData.eventName,
+        eventDescription: formData.eventDescription,
+        eventType: formData.eventType,
+        eligibility: formData.eligibility,
+        eventStartDate: formData.eventStartDate,
+        eventEndDate: formData.eventEndDate,
+        registrationDeadline: formData.registrationDeadline,
+        location: formData.location,
+        registrationLimit: formData.registrationLimit ? parseInt(formData.registrationLimit) : undefined,
+        registrationFee: parseFloat(formData.registrationFee) || 0,
+        eventTags: formData.eventTags,
       };
+
+      // Include custom form or merchandise items based on event type
+      if (formData.eventType === 'Normal') {
+        submitData.customForm = formData.customForm.filter(f => f.fieldLabel?.trim());
+      } else if (formData.eventType === 'Merchandise') {
+        submitData.merchandiseItems = formData.merchandiseItems.filter(m => m.itemName?.trim());
+      }
 
       if (isEditMode) {
         await organizerAPI.updateEvent(eventId, submitData);
@@ -232,8 +224,8 @@ const CreateEditEventPage = () => {
                   <label className="label">Event Name *</label>
                   <input
                     type="text"
-                    name="name"
-                    value={formData.name}
+                    name="eventName"
+                    value={formData.eventName}
                     onChange={handleChange}
                     className="input-field"
                     required
@@ -242,14 +234,13 @@ const CreateEditEventPage = () => {
                 </div>
 
                 <div>
-                  <label className="label">Description *</label>
+                  <label className="label">Description</label>
                   <textarea
-                    name="description"
-                    value={formData.description}
+                    name="eventDescription"
+                    value={formData.eventDescription}
                     onChange={handleChange}
                     className="input-field"
                     rows={4}
-                    required
                     placeholder="Describe your event..."
                   />
                 </div>
@@ -270,17 +261,15 @@ const CreateEditEventPage = () => {
                   </div>
 
                   <div>
-                    <label className="label">Category *</label>
+                    <label className="label">Eligibility</label>
                     <select
-                      name="category"
-                      value={formData.category}
+                      name="eligibility"
+                      value={formData.eligibility}
                       onChange={handleChange}
                       className="input-field"
-                      required
                     >
-                      <option value="">Select category</option>
-                      {categories.map(cat => (
-                        <option key={cat} value={cat}>{cat}</option>
+                      {eligibilityOptions.map(opt => (
+                        <option key={opt} value={opt}>{opt}</option>
                       ))}
                     </select>
                   </div>
@@ -293,38 +282,46 @@ const CreateEditEventPage = () => {
               <h2 className="text-xl font-semibold text-gray-900 mb-4">Date & Location</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="label">Event Date & Time *</label>
+                  <label className="label">Event Start Date & Time</label>
                   <input
                     type="datetime-local"
-                    name="eventDate"
-                    value={formData.eventDate}
+                    name="eventStartDate"
+                    value={formData.eventStartDate}
                     onChange={handleChange}
                     className="input-field"
-                    required
                   />
                 </div>
 
                 <div>
-                  <label className="label">Registration Deadline *</label>
+                  <label className="label">Event End Date & Time</label>
+                  <input
+                    type="datetime-local"
+                    name="eventEndDate"
+                    value={formData.eventEndDate}
+                    onChange={handleChange}
+                    className="input-field"
+                  />
+                </div>
+
+                <div>
+                  <label className="label">Registration Deadline</label>
                   <input
                     type="datetime-local"
                     name="registrationDeadline"
                     value={formData.registrationDeadline}
                     onChange={handleChange}
                     className="input-field"
-                    required
                   />
                 </div>
 
-                <div className="md:col-span-2">
-                  <label className="label">Location *</label>
+                <div>
+                  <label className="label">Location</label>
                   <input
                     type="text"
                     name="location"
                     value={formData.location}
                     onChange={handleChange}
                     className="input-field"
-                    required
                     placeholder="e.g., Auditorium, IIIT Hyderabad"
                   />
                 </div>
@@ -336,15 +333,15 @@ const CreateEditEventPage = () => {
               <h2 className="text-xl font-semibold text-gray-900 mb-4">Capacity & Fees</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="label">Max Participants *</label>
+                  <label className="label">Registration Limit</label>
                   <input
                     type="number"
-                    name="maxParticipants"
-                    value={formData.maxParticipants}
+                    name="registrationLimit"
+                    value={formData.registrationLimit}
                     onChange={handleChange}
                     className="input-field"
                     min="1"
-                    required
+                    placeholder="Leave empty for unlimited"
                   />
                 </div>
 
@@ -362,120 +359,110 @@ const CreateEditEventPage = () => {
               </div>
             </div>
 
-            {/* Rules & Banner */}
-            <div className="card">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">Additional Details</h2>
-              <div className="space-y-4">
-                <div>
-                  <label className="label">Rules & Guidelines</label>
-                  <textarea
-                    name="rules"
-                    value={formData.rules}
-                    onChange={handleChange}
-                    className="input-field"
-                    rows={4}
-                    placeholder="Add any rules or guidelines for participants..."
-                  />
+            {/* Custom Form Fields (for Normal events) */}
+            {formData.eventType === 'Normal' && (
+              <div className="card">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-xl font-semibold text-gray-900">Custom Form Fields</h2>
+                  <button
+                    type="button"
+                    onClick={addCustomField}
+                    className="btn-secondary text-sm"
+                    disabled={formData.isFormLocked}
+                  >
+                    <Plus className="w-4 h-4 mr-1 inline" />
+                    Add Field
+                  </button>
                 </div>
 
-                <div>
-                  <label className="label">Banner Image URL</label>
-                  <input
-                    type="url"
-                    name="bannerImage"
-                    value={formData.bannerImage}
-                    onChange={handleChange}
-                    className="input-field"
-                    placeholder="https://example.com/banner.jpg"
-                  />
-                </div>
-              </div>
-            </div>
+                {formData.isFormLocked && (
+                  <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+                    <p className="text-yellow-800 text-sm flex items-center">
+                      <span className="mr-2">🔒</span>
+                      <strong>Custom form is locked.</strong> The form cannot be modified because participants have already registered.
+                    </p>
+                  </div>
+                )}
 
-            {/* Custom Form Fields */}
-            <div className="card">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold text-gray-900">Custom Form Fields</h2>
-                <button
-                  type="button"
-                  onClick={addCustomField}
-                  className="btn-secondary text-sm"
-                  disabled={formData.customFormLocked}
-                >
-                  <Plus className="w-4 h-4 mr-1 inline" />
-                  Add Field
-                </button>
-              </div>
-
-              {formData.customFormLocked && (
-                <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
-                  <p className="text-yellow-800 text-sm flex items-center">
-                    <span className="mr-2">🔒</span>
-                    <strong>Custom form is locked.</strong> The form cannot be modified because participants have already registered. This protects existing participant data.
+                {formData.customForm.length === 0 ? (
+                  <p className="text-gray-600 text-sm">
+                    No custom fields added. Click "Add Field" to collect additional information from participants.
                   </p>
-                </div>
-              )}
-
-              {formData.customFormFields.length === 0 ? (
-                <p className="text-gray-600 text-sm">
-                  No custom fields added. Click "Add Field" to collect additional information from participants.
-                </p>
-              ) : (
-                <div className="space-y-4">
-                  {formData.customFormFields.map((field, index) => (
-                    <div key={index} className="p-4 border border-gray-200 rounded-lg">
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div>
-                          <label className="label text-sm">Field Label</label>
-                          <input
-                            type="text"
-                            value={field.label}
-                            onChange={(e) => updateCustomField(index, 'label', e.target.value)}
-                            className="input-field"
-                            placeholder="e.g., T-shirt Size"
-                            disabled={formData.customFormLocked}
-                          />
-                        </div>
-                        <div>
-                          <label className="label text-sm">Field Type</label>
-                          <select
-                            value={field.type}
-                            onChange={(e) => updateCustomField(index, 'type', e.target.value)}
-                            className="input-field"
-                            disabled={formData.customFormLocked}
-                          >
-                            <option value="text">Text</option>
-                            <option value="number">Number</option>
-                            <option value="textarea">Textarea</option>
-                            <option value="file">File Upload</option>
-                          </select>
-                        </div>
-                        <div className="flex items-end gap-2">
-                          <label className="flex items-center gap-2">
+                ) : (
+                  <div className="space-y-4">
+                    {formData.customForm.map((field, index) => (
+                      <div key={index} className="p-4 border border-gray-200 rounded-lg">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <div>
+                            <label className="label text-sm">Field Label</label>
                             <input
-                              type="checkbox"
-                              checked={field.required}
-                              onChange={(e) => updateCustomField(index, 'required', e.target.checked)}
-                              className="w-4 h-4"
-                              disabled={formData.customFormLocked}
+                              type="text"
+                              value={field.fieldLabel}
+                              onChange={(e) => updateCustomField(index, 'fieldLabel', e.target.value)}
+                              className="input-field"
+                              placeholder="e.g., T-shirt Size"
+                              disabled={formData.isFormLocked}
                             />
-                            <span className="text-sm text-gray-700">Required</span>
-                          </label>
-                          <button
-                            type="button"
-                            onClick={() => removeCustomField(index)}
-                            className="ml-auto p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                            disabled={formData.customFormLocked}
-                          >
-                            <X className="w-4 h-4" />
-                          </button>
+                          </div>
+                          <div>
+                            <label className="label text-sm">Field Type</label>
+                            <select
+                              value={field.fieldType}
+                              onChange={(e) => updateCustomField(index, 'fieldType', e.target.value)}
+                              className="input-field"
+                              disabled={formData.isFormLocked}
+                            >
+                              <option value="text">Text</option>
+                              <option value="textarea">Textarea</option>
+                              <option value="number">Number</option>
+                              <option value="email">Email</option>
+                              <option value="date">Date</option>
+                              <option value="dropdown">Dropdown</option>
+                              <option value="checkbox">Checkbox</option>
+                              <option value="radio">Radio</option>
+                              <option value="file">File Upload</option>
+                            </select>
+                          </div>
+                          <div className="flex items-end gap-2">
+                            <label className="flex items-center gap-2">
+                              <input
+                                type="checkbox"
+                                checked={field.isRequired}
+                                onChange={(e) => updateCustomField(index, 'isRequired', e.target.checked)}
+                                className="w-4 h-4"
+                                disabled={formData.isFormLocked}
+                              />
+                              <span className="text-sm text-gray-700">Required</span>
+                            </label>
+                            <button
+                              type="button"
+                              onClick={() => removeCustomField(index)}
+                              className="ml-auto p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                              disabled={formData.isFormLocked}
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </div>
                         </div>
+                        {['dropdown', 'checkbox', 'radio'].includes(field.fieldType) && (
+                          <div className="mt-3">
+                            <label className="label text-sm">Options (comma-separated)</label>
+                            <input
+                              type="text"
+                              value={(field.options || []).join(', ')}
+                              onChange={(e) => updateCustomField(index, 'options', e.target.value.split(',').map(o => o.trim()).filter(Boolean))}
+                              className="input-field"
+                              placeholder="e.g., S, M, L, XL"
+                              disabled={formData.isFormLocked}
+                            />
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Merchandise Items (only for Merchandise events) */}
             {formData.eventType === 'Merchandise' && (
@@ -500,38 +487,38 @@ const CreateEditEventPage = () => {
                   <div className="space-y-4">
                     {formData.merchandiseItems.map((item, index) => (
                       <div key={index} className="p-4 border border-gray-200 rounded-lg">
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                           <div>
                             <label className="label text-sm">Item Name</label>
                             <input
                               type="text"
-                              value={item.name}
-                              onChange={(e) => updateMerchandiseItem(index, 'name', e.target.value)}
+                              value={item.itemName}
+                              onChange={(e) => updateMerchandiseItem(index, 'itemName', e.target.value)}
                               className="input-field"
                               placeholder="e.g., Event T-Shirt"
                             />
                           </div>
                           <div>
-                            <label className="label text-sm">Description</label>
+                            <label className="label text-sm">Price (₹)</label>
                             <input
-                              type="text"
-                              value={item.description}
-                              onChange={(e) => updateMerchandiseItem(index, 'description', e.target.value)}
+                              type="number"
+                              value={item.price}
+                              onChange={(e) => updateMerchandiseItem(index, 'price', e.target.value)}
                               className="input-field"
-                              placeholder="Optional"
+                              min="0"
                             />
                           </div>
-                          <div className="flex items-end gap-2">
-                            <div className="flex-1">
-                              <label className="label text-sm">Price (₹)</label>
-                              <input
-                                type="number"
-                                value={item.price}
-                                onChange={(e) => updateMerchandiseItem(index, 'price', e.target.value)}
-                                className="input-field"
-                                min="0"
-                              />
-                            </div>
+                          <div>
+                            <label className="label text-sm">Stock Quantity</label>
+                            <input
+                              type="number"
+                              value={item.stockQuantity}
+                              onChange={(e) => updateMerchandiseItem(index, 'stockQuantity', e.target.value)}
+                              className="input-field"
+                              min="0"
+                            />
+                          </div>
+                          <div className="flex items-end">
                             <button
                               type="button"
                               onClick={() => removeMerchandiseItem(index)}
@@ -539,6 +526,38 @@ const CreateEditEventPage = () => {
                             >
                               <X className="w-4 h-4" />
                             </button>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-3">
+                          <div>
+                            <label className="label text-sm">Sizes (comma-separated)</label>
+                            <input
+                              type="text"
+                              value={(item.sizes || []).join(', ')}
+                              onChange={(e) => updateMerchandiseItem(index, 'sizes', e.target.value.split(',').map(s => s.trim()).filter(Boolean))}
+                              className="input-field"
+                              placeholder="e.g., S, M, L, XL"
+                            />
+                          </div>
+                          <div>
+                            <label className="label text-sm">Colors (comma-separated)</label>
+                            <input
+                              type="text"
+                              value={(item.colors || []).join(', ')}
+                              onChange={(e) => updateMerchandiseItem(index, 'colors', e.target.value.split(',').map(s => s.trim()).filter(Boolean))}
+                              className="input-field"
+                              placeholder="e.g., Red, Blue, Black"
+                            />
+                          </div>
+                          <div>
+                            <label className="label text-sm">Variants (comma-separated)</label>
+                            <input
+                              type="text"
+                              value={(item.variants || []).join(', ')}
+                              onChange={(e) => updateMerchandiseItem(index, 'variants', e.target.value.split(',').map(s => s.trim()).filter(Boolean))}
+                              className="input-field"
+                              placeholder="e.g., V-Neck, Round Neck"
+                            />
                           </div>
                         </div>
                       </div>

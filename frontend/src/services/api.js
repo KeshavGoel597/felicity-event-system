@@ -73,20 +73,26 @@ export const authAPI = {
 // ============ PARTICIPANT ENDPOINTS ============
 
 export const participantAPI = {
+  // Dashboard
+  getDashboard: () => api.get('/participant/dashboard'),
+  
   // Get all events (with filters)
-  getEvents: (params) => api.get('/participant/events', { params }),
+  getEvents: (params) => api.get('/events/browse', { params }),
   
   // Get trending events (Top 5/24h)
   getTrendingEvents: () => api.get('/events/trending'),
   
   // Search events
-  searchEvents: (params) => api.get('/participant/events/search', { params }),
+  searchEvents: (params) => api.get('/events/browse', { params }),
   
   // Get event details
-  getEventDetails: (eventId) => api.get(`/participant/events/${eventId}`),
+  getEventDetails: (eventId) => api.get(`/events/${eventId}`),
   
   // Register for event
-  registerForEvent: (eventId, data) => api.post(`/participant/events/${eventId}/register`, data),
+  registerForEvent: (eventId, data) => api.post(`/registrations/event/${eventId}`, data),
+  
+  // Purchase merchandise
+  purchaseMerchandise: (eventId, data) => api.post(`/registrations/merchandise/${eventId}`, data),
   
   // Get my registrations
   getMyRegistrations: (params) => api.get('/participant/registrations', { params }),
@@ -94,21 +100,33 @@ export const participantAPI = {
   // Get registration details
   getRegistrationDetails: (registrationId) => api.get(`/participant/registrations/${registrationId}`),
   
-  // Get QR code
-  getQRCode: (registrationId) => api.get(`/participant/registrations/${registrationId}/qr`),
-  
-  // Get my purchased merchandise
-  getMyMerchandise: () => api.get('/participant/merchandise'),
-  
-  // Get registration by ID
+  // Get registration by ID (alias)
   getRegistrationById: (registrationId) => api.get(`/participant/registrations/${registrationId}`),
   
+  // Cancel registration
+  cancelRegistration: (registrationId) => api.delete(`/registrations/${registrationId}`),
+  
+  // Get ticket by ticket ID
+  getTicket: (ticketId) => api.get(`/registrations/ticket/${ticketId}`),
+  
+  // Get my purchased merchandise
+  getMyMerchandise: () => api.get('/participant/registrations'),
+  
   // Upload payment proof
-  uploadPaymentProof: (registrationId, formData) => api.post(`/participant/registrations/${registrationId}/payment-proof`, formData, {
+  uploadPaymentProof: (registrationId, formData) => api.post(`/registrations/${registrationId}/payment-proof`, formData, {
     headers: {
       'Content-Type': 'multipart/form-data',
     },
   }),
+  
+  // Check registration status
+  checkRegistration: (eventId) => api.get(`/events/${eventId}/check-registration`),
+  
+  // Profile
+  getProfile: () => api.get('/participant/profile'),
+  updateProfile: (data) => api.put('/participant/profile', data),
+  updatePreferences: (data) => api.put('/participant/preferences', data),
+  changePassword: (data) => api.post('/participant/change-password', data),
   
   // Feedback
   submitFeedback: (eventId, data) => api.post(`/participant/events/${eventId}/feedback`, data),
@@ -126,28 +144,28 @@ export const organizerAPI = {
   // Dashboard stats
   getDashboard: () => api.get('/organizer/dashboard'),
   
-  // Get registrations for my events
-  getEventRegistrations: (params) => api.get('/organizer/registrations', { params }),
-  
-  // Export registrations as CSV
-  exportRegistrations: (eventId) => api.get(`/organizer/registrations/export/${eventId}`, {
-    responseType: 'blob',
-  }),
-  
-  // Mark attendance
-  markAttendance: (data) => api.post('/organizer/registrations/mark-attendance', data),
+  // Profile
+  getProfile: () => api.get('/organizer/profile'),
+  updateProfile: (data) => api.put('/organizer/profile', data),
   
   // Event management
-  createEvent: (data) => api.post('/organizer/events', data),
-  getMyEvents: (params) => api.get('/organizer/events', { params }),
-  getEventById: (eventId) => api.get(`/organizer/events/${eventId}`),
+  createEvent: (data) => api.post('/organizer/events/create', data),
+  getMyEvents: (params) => api.get('/organizer/dashboard', { params }),
+  getEventById: (eventId) => api.get(`/organizer/events/${eventId}/details`),
   updateEvent: (eventId, data) => api.put(`/organizer/events/${eventId}`, data),
-  deleteEvent: (eventId) => api.delete(`/organizer/events/${eventId}`),
   
   // Event status management
-  publishEvent: (eventId) => api.patch(`/organizer/events/${eventId}/publish`),
-  cancelEvent: (eventId) => api.patch(`/organizer/events/${eventId}/cancel`),
-  completeEvent: (eventId) => api.patch(`/organizer/events/${eventId}/complete`),
+  publishEvent: (eventId) => api.post(`/organizer/events/${eventId}/publish`),
+  changeEventStatus: (eventId, data) => api.put(`/organizer/events/${eventId}/status`, data),
+  
+  // Custom Form
+  updateCustomForm: (eventId, data) => api.put(`/organizer/events/${eventId}/custom-form`, data),
+  
+  // Participants Management
+  getParticipants: (eventId, params) => api.get(`/organizer/events/${eventId}/participants`, { params }),
+  exportParticipantsCSV: (eventId) => api.get(`/organizer/events/${eventId}/export-csv`, {
+    responseType: 'blob',
+  }),
   
   // QR Scanner & Attendance
   markAttendance: (eventId, data) => api.post(`/organizer/events/${eventId}/scan-qr`, data),
@@ -165,6 +183,13 @@ export const organizerAPI = {
   // Discussions
   postOrganizerMessage: (eventId, data) => api.post(`/organizer/events/${eventId}/discussions`, data),
   getOrganizerDiscussions: (eventId) => api.get(`/organizer/events/${eventId}/discussions`),
+  pinMessage: (discussionId) => api.put(`/organizer/discussions/${discussionId}/pin`),
+  
+  // Password Reset Requests (own)
+  getMyResetRequests: () => api.get('/organizer/password-reset-requests'),
+  
+  // Ongoing Events
+  getOngoingEvents: () => api.get('/organizer/events/ongoing'),
 };
 
 // ============ ADMIN ENDPOINTS ============

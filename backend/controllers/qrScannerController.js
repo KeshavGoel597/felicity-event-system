@@ -77,7 +77,7 @@ const markAttendance = async (req, res) => {
       ticketId,
       eventId: manualOverride ? { $in: [eventId, qrEventId] } : eventId,
       participantId,
-    }).populate('participantId', 'firstName lastName email rollNumber');
+    }).populate('participantId', 'firstName lastName email');
 
     if (!registration) {
       return res.status(404).json({
@@ -129,7 +129,6 @@ const markAttendance = async (req, res) => {
         ticketId: registration.ticketId,
         participantName: `${registration.participantId.firstName} ${registration.participantId.lastName}`,
         email: registration.participantId.email,
-        rollNumber: registration.participantId.rollNumber,
         registrationType: registration.registrationType,
         markedAt: registration.attendanceTimestamp,
       },
@@ -187,7 +186,7 @@ const getAttendanceStats = async (req, res) => {
       eventId,
       participationStatus: 'Registered',
     })
-      .populate('participantId', 'firstName lastName email rollNumber')
+      .populate('participantId', 'firstName lastName email')
       .select('ticketId attendanceMarked attendanceTimestamp registrationType')
       .sort({ attendanceTimestamp: -1 });
 
@@ -207,7 +206,6 @@ const getAttendanceStats = async (req, res) => {
           ? `${reg.participantId.firstName} ${reg.participantId.lastName}` 
           : 'N/A',
         email: reg.participantId?.email || 'N/A',
-        rollNumber: reg.participantId?.rollNumber || 'N/A',
         registrationType: reg.registrationType,
         attended: reg.attendanceMarked,
         markedAt: reg.attendanceTimestamp || null,

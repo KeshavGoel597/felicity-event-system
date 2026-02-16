@@ -1,6 +1,6 @@
 const PasswordResetRequest = require('../models/PasswordResetRequest');
 const Organizer = require('../models/Organizer');
-const sendEmail = require('../utils/emailService');
+const { sendEmail } = require('../utils/emailService');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 
@@ -20,7 +20,7 @@ exports.requestPasswordReset = async (req, res) => {
     }
 
     // Check if organizer exists
-    const organizer = await Organizer.findOne({ email });
+    const organizer = await Organizer.findOne({ loginEmail: email });
     if (!organizer) {
       return res.status(404).json({
         success: false,
@@ -49,11 +49,11 @@ exports.requestPasswordReset = async (req, res) => {
 
     // Send confirmation email to organizer
     await sendEmail({
-      to: organizer.email,
+      to: organizer.loginEmail,
       subject: 'Password Reset Request Received',
       html: `
         <h2>Password Reset Request</h2>
-        <p>Dear ${organizer.name},</p>
+        <p>Dear ${organizer.organizerName},</p>
         <p>Your password reset request has been received and is pending admin approval.</p>
         <p><strong>Reason:</strong> ${reason}</p>
         <p>You will receive an email once your request is reviewed by the admin.</p>
@@ -91,8 +91,8 @@ exports.getPasswordResetRequests = async (req, res) => {
 
     // Get requests with organizer details
     const requests = await PasswordResetRequest.find(filter)
-      .populate('organizer', 'name email organizationName phone')
-      .populate('reviewedBy', 'name email')
+      .populate('organizer', 'organizerName loginEmail category contactNumber')
+      .populate('reviewedBy', 'email')
       .sort({ createdAt: -1 });
 
     // Calculate stats
@@ -163,11 +163,11 @@ exports.approvePasswordReset = async (req, res) => {
 
     // Send email to organizer with temporary password
     await sendEmail({
-      to: resetRequest.organizer.email,
+      to: resetRequest.organizer.loginEmail,
       subject: 'Password Reset Approved - Temporary Password',
       html: `
         <h2>Password Reset Approved</h2>
-        <p>Dear ${resetRequest.organizer.name},</p>
+        <p>Dear ${resetRequest.organizer.organizerName},</p>
         <p>Your password reset request has been approved by the admin.</p>
         <div style="background-color: #f3f4f6; padding: 16px; border-radius: 8px; margin: 16px 0;">
           <p style="margin: 0;"><strong>Temporary Password:</strong></p>
@@ -242,11 +242,11 @@ exports.rejectPasswordReset = async (req, res) => {
 
     // Send email to organizer
     await sendEmail({
-      to: resetRequest.organizer.email,
+      to: resetRequest.organizer.loginEmail,
       subject: 'Password Reset Request Rejected',
       html: `
         <h2>Password Reset Request Rejected</h2>
-        <p>Dear ${resetRequest.organizer.name},</p>
+        <p>Dear ${resetRequest.organizer.organizerName},</p>
         <p>Your password reset request has been rejected by the admin.</p>
         <div style="background-color: #fef2f2; padding: 16px; border-radius: 8px; margin: 16px 0; border-left: 4px solid #ef4444;">
           <p style="margin: 0;"><strong>Reason:</strong></p>
@@ -280,7 +280,7 @@ exports.getMyResetRequests = async (req, res) => {
     const requests = await PasswordResetRequest.find({
       organizer: req.user._id,
     })
-      .populate('reviewedBy', 'name email')
+      .populate('reviewedBy', 'email')
       .sort({ createdAt: -1 });
 
     res.status(200).json({

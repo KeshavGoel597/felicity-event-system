@@ -51,7 +51,7 @@ const registrationSchema = new mongoose.Schema(
     participationStatus: {
       type: String,
       enum: {
-        values: ['Registered', 'Cancelled', 'Rejected', 'Completed'],
+        values: ['Registered', 'Pending', 'Cancelled', 'Rejected', 'Completed'],
         message: 'Invalid participation status',
       },
       default: 'Registered',

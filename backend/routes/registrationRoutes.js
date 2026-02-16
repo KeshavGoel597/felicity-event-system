@@ -10,7 +10,7 @@ const {
   uploadPaymentProof,
 } = require('../controllers/paymentApprovalController');
 const { protect, authorize } = require('../middleware/auth');
-const { uploadSingle } = require('../middleware/fileUpload');
+const upload = require('../middleware/fileUpload');
 
 // All routes are protected (participant only)
 router.post(
@@ -47,7 +47,7 @@ router.post(
   '/:registrationId/payment-proof',
   protect,
   authorize('participant'),
-  uploadSingle('paymentProof'),
+  upload.single('paymentProof'),
   uploadPaymentProof
 );
 

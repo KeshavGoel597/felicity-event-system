@@ -11,6 +11,7 @@ import OnboardingPage from './pages/OnboardingPage';
 import OrganizerPasswordResetPage from './pages/OrganizerPasswordResetPage';
 
 // Participant Pages
+import ParticipantDashboardPage from './pages/participant/DashboardPage';
 import ParticipantEventsPage from './pages/participant/EventsPage';
 import ParticipantEventDetailsPage from './pages/participant/EventDetailsPage';
 import ParticipantEventRegistrationPage from './pages/participant/EventRegistrationPage';
@@ -18,11 +19,15 @@ import ParticipantRegistrationsPage from './pages/participant/RegistrationsPage'
 import ParticipantPaymentProofUploadPage from './pages/participant/PaymentProofUploadPage';
 import ParticipantDiscussionForumPage from './pages/participant/DiscussionForumPage';
 import ParticipantFeedbackPage from './pages/participant/FeedbackPage';
+import ParticipantProfilePage from './pages/participant/ProfilePage';
+import ParticipantClubsPage from './pages/participant/ClubsPage';
+import ParticipantOrganizerDetailPage from './pages/participant/OrganizerDetailPage';
 
 // Organizer Pages
 import OrganizerDashboardPage from './pages/organizer/DashboardPage';
 import OrganizerEventsPage from './pages/organizer/EventsPage';
 import OrganizerCreateEditEventPage from './pages/organizer/CreateEditEventPage';
+import OrganizerProfilePage from './pages/organizer/ProfilePage';
 import OrganizerQRScannerPage from './pages/organizer/QRScannerPage';
 import OrganizerAttendanceListPage from './pages/organizer/AttendanceListPage';
 import OrganizerPaymentApprovalsPage from './pages/organizer/PaymentApprovalsPage';
@@ -57,6 +62,14 @@ function App() {
           />
 
           {/* Participant Routes */}
+          <Route 
+            path="/participant/dashboard" 
+            element={
+              <ProtectedRoute allowedRoles={['participant']}>
+                <ParticipantDashboardPage />
+              </ProtectedRoute>
+            } 
+          />
           <Route 
             path="/participant/events" 
             element={
@@ -113,6 +126,30 @@ function App() {
               </ProtectedRoute>
             } 
           />
+          <Route 
+            path="/participant/profile" 
+            element={
+              <ProtectedRoute allowedRoles={['participant']}>
+                <ParticipantProfilePage />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/participant/clubs" 
+            element={
+              <ProtectedRoute allowedRoles={['participant']}>
+                <ParticipantClubsPage />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/participant/clubs/:organizerId" 
+            element={
+              <ProtectedRoute allowedRoles={['participant']}>
+                <ParticipantOrganizerDetailPage />
+              </ProtectedRoute>
+            } 
+          />
 
           {/* Organizer Routes */}
           <Route 
@@ -144,6 +181,14 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={['organizer']}>
                 <OrganizerCreateEditEventPage />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/organizer/profile" 
+            element={
+              <ProtectedRoute allowedRoles={['organizer']}>
+                <OrganizerProfilePage />
               </ProtectedRoute>
             } 
           />

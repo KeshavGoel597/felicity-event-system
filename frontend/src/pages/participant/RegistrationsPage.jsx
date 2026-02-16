@@ -31,7 +31,7 @@ const ParticipantRegistrationsPage = () => {
       setLoading(true);
       setError('');
       const response = await participantAPI.getMyRegistrations();
-      setRegistrations(response.data.data);
+      setRegistrations(response.data.data || []);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to fetch registrations');
     } finally {
@@ -39,16 +39,15 @@ const ParticipantRegistrationsPage = () => {
     }
   };
 
-  const handleViewQR = async (registrationId) => {
-    try {
-      const response = await participantAPI.getQRCode(registrationId);
+  const handleViewQR = (registration) => {
+    if (registration.qrCode) {
       setSelectedQR({
-        id: registrationId,
-        qrCode: response.data.data.qrCode,
-        ticketId: response.data.data.ticketId,
+        id: registration._id,
+        qrCode: registration.qrCode,
+        ticketId: registration.ticketId,
       });
-    } catch (err) {
-      setError('Failed to load QR code');
+    } else {
+      setError('QR code not available for this registration');
     }
   };
 
@@ -70,15 +69,15 @@ const ParticipantRegistrationsPage = () => {
     const now = new Date();
     
     return registrations.filter(reg => {
-      const eventDate = new Date(reg.event?.eventDate);
+      const eventDate = new Date(reg.event?.eventStartDate);
       
       switch (filter) {
         case 'upcoming':
-          return eventDate > now && reg.registrationStatus !== 'Cancelled';
+          return eventDate > now && reg.participationStatus !== 'Cancelled';
         case 'past':
-          return eventDate < now || reg.registrationStatus === 'Attended';
+          return eventDate < now || reg.participationStatus === 'Attended';
         case 'cancelled':
-          return reg.registrationStatus === 'Cancelled';
+          return reg.participationStatus === 'Cancelled';
         default:
           return true;
       }
@@ -112,7 +111,7 @@ const ParticipantRegistrationsPage = () => {
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2 text-gray-700">
                 <User className="w-5 h-5" />
-                <span className="font-medium">{user?.name}</span>
+                <span className="font-medium">{user?.firstName} {user?.lastName}</span>
               </div>
               <button
                 onClick={handleLogout}
@@ -141,7 +140,7 @@ const ParticipantRegistrationsPage = () => {
             { key: 'all', label: 'All', count: registrations.length },
             { key: 'upcoming', label: 'Upcoming', count: getFilteredRegistrations().filter(r => filter === 'all').length },
             { key: 'past', label: 'Past', count: 0 },
-            { key: 'cancelled', label: 'Cancelled', count: registrations.filter(r => r.registrationStatus === 'Cancelled').length },
+            { key: 'cancelled', label: 'Cancelled', count: registrations.filter(r => r.participationStatus === 'Cancelled').length },
           ].map(tab => (
             <button
               key={tab.key}
@@ -185,16 +184,16 @@ const ParticipantRegistrationsPage = () => {
                 <div className="mb-4">
                   <div className="flex items-start justify-between mb-2">
                     <h3 className="text-xl font-semibold text-gray-900">
-                      {registration.event?.name}
+                      {registration.event?.eventName}
                     </h3>
-                    <span className={getRegistrationStatusBadgeClass(registration.registrationStatus)}>
-                      {registration.registrationStatus}
+                    <span className={getRegistrationStatusBadgeClass(registration.participationStatus)}>
+                      {registration.participationStatus}
                     </span>
                   </div>
                   <div className="space-y-2">
                     <div className="flex items-center text-sm text-gray-700">
                       <Calendar className="w-4 h-4 mr-2 text-primary-600" />
-                      <span>{formatDate(registration.event?.eventDate)}</span>
+                      <span>{formatDate(registration.event?.eventStartDate)}</span>
                     </div>
                     <div className="flex items-center text-sm text-gray-700">
                       <MapPin className="w-4 h-4 mr-2 text-primary-600" />
@@ -225,12 +224,16 @@ const ParticipantRegistrationsPage = () => {
                 </div>
 
                 {/* Payment Info */}
-                {registration.amountPaid > 0 && (
+                {registration.event?.registrationFee > 0 && (
                   <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
                     <p className="text-sm text-gray-700">
-                      Amount Paid:{' '}
+                      Registration Fee:{' '}
                       <span className="font-semibold text-green-700">
-                        {formatCurrency(registration.amountPaid)}
+                        {formatCurrency(registration.event?.registrationFee)}
+                      </span>
+                      {' — '}
+                      <span className={`font-medium ${registration.paymentStatus === 'Paid' ? 'text-green-600' : 'text-yellow-600'}`}>
+                        {registration.paymentStatus}
                       </span>
                     </p>
                   </div>
@@ -243,7 +246,7 @@ const ParticipantRegistrationsPage = () => {
                     <div className="space-y-1">
                       {registration.merchandiseDetails.map((item, index) => (
                         <div key={index} className="text-sm text-gray-600 flex justify-between">
-                          <span>{item.name} x {item.quantity}</span>
+                          <span>{item.itemName} x {item.quantity}</span>
                           <span>{formatCurrency(item.price * item.quantity)}</span>
                         </div>
                       ))}
@@ -255,7 +258,7 @@ const ParticipantRegistrationsPage = () => {
                 {registration.attendanceMarked && (
                   <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                     <p className="text-sm text-blue-700 font-medium">
-                      ✓ Attendance marked on {formatDate(registration.attendanceMarkedAt)}
+                      ✓ Attendance marked on {formatDate(registration.attendanceTimestamp)}
                     </p>
                   </div>
                 )}
@@ -263,7 +266,7 @@ const ParticipantRegistrationsPage = () => {
                 {/* Actions */}
                 <div className="flex gap-2">
                   <button
-                    onClick={() => handleViewQR(registration._id)}
+                    onClick={() => handleViewQR(registration)}
                     className="flex-1 btn-primary text-sm"
                   >
                     <Eye className="w-4 h-4 mr-1 inline" />

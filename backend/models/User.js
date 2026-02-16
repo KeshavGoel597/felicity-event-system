@@ -61,6 +61,10 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: 'participant',
     },
+    isOnboarded: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: true,

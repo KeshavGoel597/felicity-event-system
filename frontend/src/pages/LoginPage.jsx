@@ -163,12 +163,12 @@ const LoginPage = () => {
 
           {formData.role === 'organizer' && (
             <p className="text-center text-sm text-gray-600">
-              New organizer?{' '}
+              Forgot your password?{' '}
               <Link
-                to="/organizer/signup"
+                to="/organizer/reset-password"
                 className="font-medium text-primary-600 hover:text-primary-500"
               >
-                Request organizer access
+                Request password reset
               </Link>
             </p>
           )}

@@ -19,8 +19,8 @@ const browseEvents = async (req, res) => {
       userId,
     } = req.query;
 
-    // Base query: only published events
-    let query = { status: 'Published' };
+    // Base query: only published or ongoing events
+    let query = { status: { $in: ['Published', 'Ongoing'] } };
 
     // Apply event type filter
     if (eventType && eventType !== 'All') {
@@ -75,6 +75,22 @@ const browseEvents = async (req, res) => {
       .populate('organizerId', 'organizerName category')
       .sort({ eventStartDate: 1 })
       .lean();
+
+    // Auto-compute statuses based on dates
+    const now = new Date();
+    for (const event of events) {
+      if (event.status === 'Published' && event.eventStartDate && now >= new Date(event.eventStartDate)) {
+        event.status = 'Ongoing';
+        await Event.updateOne({ _id: event._id }, { $set: { status: 'Ongoing' } });
+      }
+      if ((event.status === 'Published' || event.status === 'Ongoing') && event.eventEndDate && now >= new Date(event.eventEndDate)) {
+        event.status = 'Completed';
+        await Event.updateOne({ _id: event._id }, { $set: { status: 'Completed' } });
+      }
+    }
+
+    // Filter out events that just transitioned to Completed
+    events = events.filter(e => e.status !== 'Completed');
 
     // Apply preference-based sorting if userId provided
     if (userId) {
@@ -193,7 +209,7 @@ const getTrendingEvents = async (req, res) => {
           const trending = trendingData.find((t) => t._id.toString() === id.toString());
           return {
             ...event,
-            trendingCount: trending.count,
+            registrationCount: trending.count,
           };
         }
         return null;
@@ -233,9 +249,16 @@ const getEventDetails = async (req, res) => {
       });
     }
 
+    // Auto-compute event status based on dates
+    const computedStatus = event.computeStatus();
+    if (computedStatus !== event.status) {
+      event.status = computedStatus;
+      await event.save();
+    }
+
     res.status(200).json({
       success: true,
-      event,
+      data: event,
     });
   } catch (error) {
     console.error('Get event details error:', error);

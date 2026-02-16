@@ -19,7 +19,7 @@ const OrganizersPage = () => {
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [credentials, setCredentials] = useState({ email: '', password: '' });
   const [formData, setFormData] = useState({
-    name: '',
+    organizerName: '',
     category: '',
     description: '',
     contactEmail: ''
@@ -30,6 +30,8 @@ const OrganizersPage = () => {
     'Cultural',
     'Sports',
     'Literary',
+    'Arts',
+    'Gaming',
     'Social',
     'Academic',
     'Other'
@@ -43,7 +45,7 @@ const OrganizersPage = () => {
     try {
       setLoading(true);
       const response = await adminAPI.getAllOrganizers();
-      setOrganizers(response.data.data);
+      setOrganizers(response.data.organizers || []);
     } catch (error) {
       setAlert({ type: 'error', message: 'Failed to fetch organizers' });
     } finally {
@@ -56,11 +58,11 @@ const OrganizersPage = () => {
     try {
       setLoading(true);
       const response = await adminAPI.createOrganizer(formData);
-      const { email, password } = response.data.data;
-      setCredentials({ email, password });
+      const { loginEmail, password } = response.data.credentials;
+      setCredentials({ email: loginEmail, password });
       setShowCreateModal(false);
       setShowCredentialsModal(true);
-      setFormData({ name: '', category: '', description: '', contactEmail: '' });
+      setFormData({ organizerName: '', category: '', description: '', contactEmail: '' });
       fetchOrganizers();
       setAlert({ type: 'success', message: 'Organizer created successfully!' });
     } catch (error) {
@@ -71,14 +73,14 @@ const OrganizersPage = () => {
   };
 
   const handleToggleStatus = async (organizer) => {
-    const action = organizer.isActive ? 'disable' : 'enable';
+    const action = organizer.isApproved ? 'disable' : 'enable';
     if (!window.confirm(`Are you sure you want to ${action} ${organizer.organizerName}?`)) {
       return;
     }
 
     try {
       setLoading(true);
-      if (organizer.isActive) {
+      if (organizer.isApproved) {
         await adminAPI.disableOrganizer(organizer._id);
       } else {
         await adminAPI.enableOrganizer(organizer._id);
@@ -93,7 +95,7 @@ const OrganizersPage = () => {
   };
 
   const handleDeleteOrganizer = async () => {
-    if (deleteConfirmText !== selectedOrganizer.name) {
+    if (deleteConfirmText !== selectedOrganizer.organizerName) {
       setAlert({ type: 'error', message: 'Organizer name does not match' });
       return;
     }
@@ -117,7 +119,7 @@ const OrganizersPage = () => {
     try {
       setLoading(true);
       const response = await adminAPI.getOrganizerById(organizer._id);
-      setSelectedOrganizer(response.data.data);
+      setSelectedOrganizer(response.data.organizer);
       setShowDetailModal(true);
     } catch (error) {
       setAlert({ type: 'error', message: 'Failed to fetch organizer details' });
@@ -230,7 +232,7 @@ const OrganizersPage = () => {
                         </div>
                       </td>
                       <td className="px-6 py-4">
-                        {organizer.isActive ? (
+                        {organizer.isApproved ? (
                           <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm">
                             <CheckCircle className="w-4 h-4" />
                             Active
@@ -254,13 +256,13 @@ const OrganizersPage = () => {
                           <button
                             onClick={() => handleToggleStatus(organizer)}
                             className={`p-2 rounded-lg transition-colors ${
-                              organizer.isActive
+                              organizer.isApproved
                                 ? 'text-orange-600 hover:bg-orange-50'
                                 : 'text-green-600 hover:bg-green-50'
                             }`}
-                            title={organizer.isActive ? 'Disable' : 'Enable'}
+                            title={organizer.isApproved ? 'Disable' : 'Enable'}
                           >
-                            {organizer.isActive ? <XCircle className="w-4 h-4" /> : <CheckCircle className="w-4 h-4" />}
+                            {organizer.isApproved ? <XCircle className="w-4 h-4" /> : <CheckCircle className="w-4 h-4" />}
                           </button>
                           <button
                             onClick={() => {
@@ -306,8 +308,8 @@ const OrganizersPage = () => {
                   <input
                     type="text"
                     required
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    value={formData.organizerName}
+                    onChange={(e) => setFormData({ ...formData, organizerName: e.target.value })}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                     placeholder="e.g., Tech Club"
                   />
@@ -459,7 +461,7 @@ const OrganizersPage = () => {
               <div className="space-y-4">
                 <div>
                   <label className="text-sm font-medium text-gray-600">Name</label>
-                  <p className="text-lg text-gray-900 font-semibold">{selectedOrganizer.name}</p>
+                  <p className="text-lg text-gray-900 font-semibold">{selectedOrganizer.organizerName}</p>
                 </div>
 
                 <div>
@@ -491,7 +493,7 @@ const OrganizersPage = () => {
                 <div>
                   <label className="text-sm font-medium text-gray-600">Status</label>
                   <p>
-                    {selectedOrganizer.isActive ? (
+                    {selectedOrganizer.isApproved ? (
                       <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm">
                         <CheckCircle className="w-4 h-4" />
                         Active
@@ -528,12 +530,12 @@ const OrganizersPage = () => {
                 <button
                   onClick={() => handleToggleStatus(selectedOrganizer)}
                   className={`flex-1 px-4 py-2 rounded-lg transition-colors ${
-                    selectedOrganizer.isActive
+                    selectedOrganizer.isApproved
                       ? 'bg-orange-100 text-orange-700 hover:bg-orange-200'
                       : 'bg-green-100 text-green-700 hover:bg-green-200'
                   }`}
                 >
-                  {selectedOrganizer.isActive ? 'Disable' : 'Enable'} Organizer
+                  {selectedOrganizer.isApproved ? 'Disable' : 'Enable'} Organizer
                 </button>
                 <button
                   onClick={() => {
@@ -571,14 +573,14 @@ const OrganizersPage = () => {
 
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Type <strong>{selectedOrganizer.name}</strong> to confirm:
+                  Type <strong>{selectedOrganizer.organizerName}</strong> to confirm:
                 </label>
                 <input
                   type="text"
                   value={deleteConfirmText}
                   onChange={(e) => setDeleteConfirmText(e.target.value)}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
-                  placeholder={selectedOrganizer.name}
+                  placeholder={selectedOrganizer.organizerName}
                 />
               </div>
 
@@ -594,7 +596,7 @@ const OrganizersPage = () => {
                 </button>
                 <button
                   onClick={handleDeleteOrganizer}
-                  disabled={deleteConfirmText !== selectedOrganizer.name || loading}
+                  disabled={deleteConfirmText !== selectedOrganizer.organizerName || loading}
                   className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {loading ? 'Deleting...' : 'Delete Organizer'}

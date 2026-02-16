@@ -43,8 +43,8 @@ const EventDetailsPage = () => {
     if (navigator.share) {
       try {
         await navigator.share({
-          title: event.name,
-          text: event.description,
+          title: event.eventName,
+          text: event.eventDescription,
           url: url,
         });
       } catch (err) {
@@ -79,8 +79,8 @@ const EventDetailsPage = () => {
 
   if (!event) return null;
 
-  const spotsLeft = event.maxParticipants - (event.registeredCount || 0);
-  const isFull = spotsLeft <= 0;
+  const spotsLeft = (event.registrationLimit || Infinity) - (event.currentRegistrations || 0);
+  const isFull = event.registrationLimit ? spotsLeft <= 0 : false;
   const canRegister = event.status === 'Published' && !isFull;
 
   return (
@@ -103,13 +103,13 @@ const EventDetailsPage = () => {
         <div className="w-full h-96 bg-gray-200">
           <img
             src={event.bannerImage}
-            alt={event.name}
+            alt={event.eventName}
             className="w-full h-full object-cover"
           />
         </div>
       ) : (
         <div className="w-full h-96 bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center">
-          <h1 className="text-white text-6xl font-bold">{event.name.charAt(0)}</h1>
+          <h1 className="text-white text-6xl font-bold">{event.eventName?.charAt(0)}</h1>
         </div>
       )}
 
@@ -121,7 +121,7 @@ const EventDetailsPage = () => {
             {/* Title and Status */}
             <div>
               <div className="flex items-start justify-between mb-4">
-                <h1 className="text-4xl font-bold text-gray-900">{event.name}</h1>
+                <h1 className="text-4xl font-bold text-gray-900">{event.eventName}</h1>
                 <button
                   onClick={handleShare}
                   className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
@@ -133,14 +133,14 @@ const EventDetailsPage = () => {
               <div className="flex gap-2">
                 <span className={getStatusBadgeClass(event.status)}>{event.status}</span>
                 <span className="badge badge-info">{event.eventType}</span>
-                <span className="badge bg-purple-100 text-purple-800">{event.category}</span>
+                <span className="badge bg-purple-100 text-purple-800">{event.eligibility}</span>
               </div>
             </div>
 
             {/* Description */}
             <div className="card">
               <h2 className="text-xl font-semibold text-gray-900 mb-3">About this Event</h2>
-              <p className="text-gray-700 whitespace-pre-wrap">{event.description}</p>
+              <p className="text-gray-700 whitespace-pre-wrap">{event.eventDescription}</p>
             </div>
 
             {/* Rules (if any) */}
@@ -152,7 +152,7 @@ const EventDetailsPage = () => {
             )}
 
             {/* Custom Form Fields (if any) */}
-            {event.customFormFields && event.customFormFields.length > 0 && (
+            {event.customForm && event.customForm.length > 0 && (
               <div className="card">
                 <h2 className="text-xl font-semibold text-gray-900 mb-3">
                   Additional Information Required
@@ -161,15 +161,15 @@ const EventDetailsPage = () => {
                   You'll need to provide the following information during registration:
                 </p>
                 <ul className="space-y-2">
-                  {event.customFormFields.map((field, index) => (
+                  {event.customForm.map((field, index) => (
                     <li key={index} className="flex items-start gap-2">
                       <span className="text-primary-600 font-bold">•</span>
                       <div>
                         <span className="font-medium text-gray-900">
-                          {field.label}
-                          {field.required && <span className="text-red-500 ml-1">*</span>}
+                          {field.fieldLabel}
+                          {field.isRequired && <span className="text-red-500 ml-1">*</span>}
                         </span>
-                        <span className="text-sm text-gray-500 ml-2">({field.type})</span>
+                        <span className="text-sm text-gray-500 ml-2">({field.fieldType})</span>
                       </div>
                     </li>
                   ))}
@@ -190,7 +190,7 @@ const EventDetailsPage = () => {
                       className="flex items-center justify-between p-3 border border-gray-200 rounded-lg"
                     >
                       <div>
-                        <p className="font-medium text-gray-900">{item.name}</p>
+                        <p className="font-medium text-gray-900">{item.itemName}</p>
                         {item.description && (
                           <p className="text-sm text-gray-600">{item.description}</p>
                         )}
@@ -207,10 +207,10 @@ const EventDetailsPage = () => {
             {/* Organizer Info */}
             <div className="card">
               <h2 className="text-xl font-semibold text-gray-900 mb-3">Organized By</h2>
-              <p className="text-gray-700">{event.organizer?.name || 'Felicity Team'}</p>
-              {event.organizer?.category && (
+              <p className="text-gray-700">{event.organizerId?.organizerName || 'Felicity Team'}</p>
+              {event.organizerId?.category && (
                 <p className="text-sm text-gray-600 mt-1">
-                  Category: {event.organizer.category}
+                  Category: {event.organizerId.category}
                 </p>
               )}
             </div>
@@ -229,7 +229,7 @@ const EventDetailsPage = () => {
                   <Calendar className="w-5 h-5 mr-3 text-primary-600" />
                   <div>
                     <p className="text-sm text-gray-600">Event Date</p>
-                    <p className="font-medium">{formatDateTime(event.eventDate)}</p>
+                    <p className="font-medium">{formatDateTime(event.eventStartDate)}</p>
                   </div>
                 </div>
 
@@ -254,7 +254,7 @@ const EventDetailsPage = () => {
                   <div>
                     <p className="text-sm text-gray-600">Participants</p>
                     <p className="font-medium">
-                      {event.registeredCount || 0} / {event.maxParticipants} registered
+                      {event.currentRegistrations || 0} / {event.registrationLimit || '∞'} registered
                     </p>
                   </div>
                 </div>

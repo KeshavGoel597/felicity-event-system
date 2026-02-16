@@ -26,7 +26,7 @@ const FeedbackViewPage = () => {
         organizerAPI.getEventFeedback(eventId),
       ]);
       
-      setEvent(eventRes.data.data);
+      setEvent(eventRes.data.event);
       setFeedbackData(feedbackRes.data);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to load feedback');
