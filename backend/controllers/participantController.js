@@ -246,7 +246,7 @@ const getDashboard = async (req, res) => {
     })
       .populate({
         path: 'eventId',
-        select: 'eventName eventType eventStartDate eventEndDate organizerId',
+        select: 'eventName eventType eventStartDate eventEndDate organizerId status',
         populate: {
           path: 'organizerId',
           select: 'organizerName',
@@ -269,21 +269,30 @@ const getDashboard = async (req, res) => {
 
       const regData = {
         _id: registration._id,
+        eventId: registration.eventId._id,
         eventName: registration.eventId.eventName,
         eventType: registration.eventId.eventType,
         organizerName: registration.eventId.organizerId?.organizerName || 'Unknown',
         eventStartDate: registration.eventId.eventStartDate,
         eventEndDate: registration.eventId.eventEndDate,
+        eventStatus: registration.eventId.status,
         registrationDate: registration.registrationDate,
         participationStatus: registration.participationStatus,
         ticketId: registration.ticketId,
         teamName: registration.teamName,
       };
 
-      // Upcoming events: Registered AND event hasn't started yet
+      // If event is Closed, treat it as cancelled regardless of participationStatus
+      if (registration.eventId.status === 'Closed') {
+        participationHistory.cancelledRejected.push(regData);
+        return;
+      }
+
+      // Upcoming events: Registered AND event hasn't started yet AND event is Published
       if (
         registration.participationStatus === 'Registered' &&
-        registration.eventId.eventStartDate > currentDate
+        registration.eventId.eventStartDate > currentDate &&
+        ['Published', 'Ongoing'].includes(registration.eventId.status)
       ) {
         upcomingEvents.push(regData);
       }
@@ -355,6 +364,7 @@ const getMyRegistrations = async (req, res) => {
       qrCode: reg.qrCode,
       merchandiseDetails: reg.merchandiseDetails,
       attendanceMarked: reg.attendanceMarked,
+      attendanceTimestamp: reg.attendanceTimestamp,
     }));
 
     res.status(200).json({

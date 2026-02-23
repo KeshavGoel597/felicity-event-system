@@ -6,7 +6,7 @@ import EventFilters from '../../components/EventFilters';
 import Pagination from '../../components/Pagination';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import Alert from '../../components/Alert';
-import { LogOut, User, LayoutDashboard, Heart, UserCircle } from 'lucide-react';
+import { LogOut, User, LayoutDashboard, Heart, UserCircle, Ticket } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
 const ParticipantEventsPage = () => {
@@ -153,6 +153,13 @@ const ParticipantEventsPage = () => {
               >
                 <LayoutDashboard className="w-4 h-4 mr-1 inline" />
                 Dashboard
+              </button>
+              <button
+                onClick={() => navigate('/participant/registrations')}
+                className="btn-secondary"
+              >
+                <Ticket className="w-4 h-4 mr-1 inline" />
+                My Registrations
               </button>
               <button
                 onClick={() => navigate('/participant/clubs')}

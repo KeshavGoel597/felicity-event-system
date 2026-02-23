@@ -79,9 +79,10 @@ const EventDetailsPage = () => {
 
   if (!event) return null;
 
-  const spotsLeft = (event.registrationLimit || Infinity) - (event.currentRegistrations || 0);
+  const registrationCount = event.actualRegistrations ?? event.currentRegistrations ?? 0;
+  const spotsLeft = (event.registrationLimit || Infinity) - registrationCount;
   const isFull = event.registrationLimit ? spotsLeft <= 0 : false;
-  const canRegister = event.status === 'Published' && !isFull;
+  const canRegister = ['Published', 'Ongoing'].includes(event.status) && !isFull;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -130,10 +131,13 @@ const EventDetailsPage = () => {
                   <Share2 className="w-5 h-5 text-gray-600" />
                 </button>
               </div>
-              <div className="flex gap-2">
+              <div className="flex gap-2 flex-wrap">
                 <span className={getStatusBadgeClass(event.status)}>{event.status}</span>
                 <span className="badge badge-info">{event.eventType}</span>
                 <span className="badge bg-purple-100 text-purple-800">{event.eligibility}</span>
+                {event.eventTags && event.eventTags.length > 0 && event.eventTags.map((tag, idx) => (
+                  <span key={idx} className="badge bg-gray-100 text-gray-700">{tag}</span>
+                ))}
               </div>
             </div>
 
@@ -194,6 +198,15 @@ const EventDetailsPage = () => {
                         {item.description && (
                           <p className="text-sm text-gray-600">{item.description}</p>
                         )}
+                        <p className={`text-xs mt-1 ${item.stockQuantity > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          {item.stockQuantity > 0 ? `${item.stockQuantity} in stock` : 'Out of stock'}
+                        </p>
+                        {item.sizes && item.sizes.length > 0 && (
+                          <p className="text-xs text-gray-500">Sizes: {item.sizes.join(', ')}</p>
+                        )}
+                        {item.colors && item.colors.length > 0 && (
+                          <p className="text-xs text-gray-500">Colors: {item.colors.join(', ')}</p>
+                        )}
                       </div>
                       <p className="font-semibold text-primary-600">
                         {formatCurrency(item.price)}
@@ -201,6 +214,11 @@ const EventDetailsPage = () => {
                     </div>
                   ))}
                 </div>
+                {event.purchaseLimitPerParticipant && (
+                  <p className="text-sm text-gray-500 mt-2">
+                    Purchase limit: {event.purchaseLimitPerParticipant} items per participant
+                  </p>
+                )}
               </div>
             )}
 
@@ -254,7 +272,7 @@ const EventDetailsPage = () => {
                   <div>
                     <p className="text-sm text-gray-600">Participants</p>
                     <p className="font-medium">
-                      {event.currentRegistrations || 0} / {event.registrationLimit || '∞'} registered
+                      {registrationCount} / {event.registrationLimit || '∞'} registered
                     </p>
                   </div>
                 </div>
@@ -294,7 +312,7 @@ const EventDetailsPage = () => {
                 className="w-full btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Ticket className="w-5 h-5 mr-2 inline" />
-                {event.status !== 'Published'
+                {!['Published', 'Ongoing'].includes(event.status)
                   ? `Event ${event.status}`
                   : isFull
                   ? 'Event Full'

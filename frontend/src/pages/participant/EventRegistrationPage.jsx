@@ -39,9 +39,16 @@ const EventRegistrationPage = () => {
         setFormData(prev => ({
           ...prev,
           merchandiseSelections: response.data.data.merchandiseItems?.map(item => ({
+            merchandiseId: item._id,
             itemName: item.itemName,
             quantity: 0,
             price: item.price,
+            sizes: item.sizes || [],
+            colors: item.colors || [],
+            variants: item.variants || [],
+            selectedSize: '',
+            selectedColor: '',
+            selectedVariant: '',
           })) || [],
         }));
       }
@@ -104,6 +111,15 @@ const EventRegistrationPage = () => {
     }
   };
 
+  const handleMerchandiseFieldChange = (index, field, value) => {
+    setFormData(prev => ({
+      ...prev,
+      merchandiseSelections: prev.merchandiseSelections.map((item, i) =>
+        i === index ? { ...item, [field]: value } : item
+      ),
+    }));
+  };
+
   const handleMerchandiseQuantityChange = (index, quantity) => {
     setFormData(prev => ({
       ...prev,
@@ -131,9 +147,17 @@ const EventRegistrationPage = () => {
     // Check required custom fields
     if (event.customForm) {
       for (const field of event.customForm) {
-        if (field.isRequired && !formData.customFormResponses[field.fieldLabel]) {
-          setError(`${field.fieldLabel} is required`);
-          return false;
+        if (field.isRequired) {
+          const value = formData.customFormResponses[field.fieldLabel];
+          if (value === undefined || value === null || value === '') {
+            setError(`${field.fieldLabel} is required`);
+            return false;
+          }
+          // For checkbox fields, check if array is empty
+          if (Array.isArray(value) && value.length === 0) {
+            setError(`${field.fieldLabel} is required`);
+            return false;
+          }
         }
       }
     }
@@ -147,6 +171,24 @@ const EventRegistrationPage = () => {
       if (totalItems === 0) {
         setError('Please select at least one merchandise item');
         return false;
+      }
+
+      // Validate size/color/variant selections for items with quantity > 0
+      for (const item of formData.merchandiseSelections) {
+        if (item.quantity > 0) {
+          if (item.sizes && item.sizes.length > 0 && !item.selectedSize) {
+            setError(`Please select a size for ${item.itemName}`);
+            return false;
+          }
+          if (item.colors && item.colors.length > 0 && !item.selectedColor) {
+            setError(`Please select a color for ${item.itemName}`);
+            return false;
+          }
+          if (item.variants && item.variants.length > 0 && !item.selectedVariant) {
+            setError(`Please select a variant for ${item.itemName}`);
+            return false;
+          }
+        }
       }
     }
 
@@ -162,17 +204,27 @@ const EventRegistrationPage = () => {
     try {
       setSubmitting(true);
 
-      const registrationData = {
-        customFormResponses: formData.customFormResponses,
-      };
-
       if (event.eventType === 'Merchandise') {
-        registrationData.merchandiseDetails = formData.merchandiseSelections.filter(
-          item => item.quantity > 0
-        );
+        // Build items array for merchandise endpoint
+        const items = formData.merchandiseSelections
+          .filter(item => item.quantity > 0)
+          .map((item) => ({
+            merchandiseId: item.merchandiseId,
+            quantity: item.quantity,
+            size: item.selectedSize || undefined,
+            color: item.selectedColor || undefined,
+            variant: item.selectedVariant || undefined,
+          }));
+
+        await participantAPI.purchaseMerchandise(eventId, { items });
+      } else {
+        // Normal event registration
+        const registrationData = {
+          formResponses: formData.customFormResponses,
+        };
+        await participantAPI.registerForEvent(eventId, registrationData);
       }
 
-      await participantAPI.registerForEvent(eventId, registrationData);
       setSuccess(true);
     } catch (err) {
       setError(err.response?.data?.message || 'Registration failed');
@@ -203,11 +255,13 @@ const EventRegistrationPage = () => {
             </div>
           </div>
           <h2 className="text-2xl font-bold text-gray-900 mb-2">
-            Registration Successful!
+            {event.eventType === 'Merchandise' ? 'Order Placed!' : 'Registration Successful!'}
           </h2>
           <p className="text-gray-600 mb-6">
-            You've successfully registered for {event.eventName}. Check your email for confirmation
-            and QR code.
+            {event.eventType === 'Merchandise' 
+              ? `Your merchandise order for ${event.eventName} has been placed. Please upload payment proof from your registrations page. Your ticket with QR code will be issued after payment approval.`
+              : `You've successfully registered for ${event.eventName}. Check your email for confirmation and QR code.`
+            }
           </p>
           <div className="space-y-3">
             <button
@@ -318,6 +372,68 @@ const EventRegistrationPage = () => {
                         </select>
                       )}
 
+                      {field.fieldType === 'checkbox' && (
+                        <div className="space-y-2">
+                          {field.options?.map((opt, i) => (
+                            <label key={i} className="flex items-center gap-2 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={(formData.customFormResponses[field.fieldLabel] || []).includes(opt)}
+                                onChange={(e) => {
+                                  const current = formData.customFormResponses[field.fieldLabel] || [];
+                                  const updated = e.target.checked
+                                    ? [...current, opt]
+                                    : current.filter(v => v !== opt);
+                                  handleCustomFieldChange(field.fieldLabel, updated);
+                                }}
+                                className="w-4 h-4 text-primary-600 rounded"
+                              />
+                              <span className="text-sm text-gray-700">{opt}</span>
+                            </label>
+                          ))}
+                        </div>
+                      )}
+
+                      {field.fieldType === 'radio' && (
+                        <div className="space-y-2">
+                          {field.options?.map((opt, i) => (
+                            <label key={i} className="flex items-center gap-2 cursor-pointer">
+                              <input
+                                type="radio"
+                                name={`radio-${field.fieldLabel}`}
+                                value={opt}
+                                checked={formData.customFormResponses[field.fieldLabel] === opt}
+                                onChange={(e) => handleCustomFieldChange(field.fieldLabel, e.target.value)}
+                                className="w-4 h-4 text-primary-600"
+                                required={field.isRequired}
+                              />
+                              <span className="text-sm text-gray-700">{opt}</span>
+                            </label>
+                          ))}
+                        </div>
+                      )}
+
+                      {field.fieldType === 'email' && (
+                        <input
+                          type="email"
+                          required={field.isRequired}
+                          value={formData.customFormResponses[field.fieldLabel] || ''}
+                          onChange={(e) => handleCustomFieldChange(field.fieldLabel, e.target.value)}
+                          className="input-field"
+                          placeholder="Enter email address"
+                        />
+                      )}
+
+                      {field.fieldType === 'date' && (
+                        <input
+                          type="date"
+                          required={field.isRequired}
+                          value={formData.customFormResponses[field.fieldLabel] || ''}
+                          onChange={(e) => handleCustomFieldChange(field.fieldLabel, e.target.value)}
+                          className="input-field"
+                        />
+                      )}
+
                       {field.fieldType === 'file' && (
                         <div>
                           <input
@@ -360,27 +476,77 @@ const EventRegistrationPage = () => {
                   {formData.merchandiseSelections.map((item, index) => (
                     <div
                       key={index}
-                      className="flex items-center justify-between p-4 border border-gray-200 rounded-lg"
+                      className="p-4 border border-gray-200 rounded-lg"
                     >
-                      <div className="flex-1">
-                        <p className="font-medium text-gray-900">{item.itemName}</p>
-                        <p className="text-sm text-primary-600 font-semibold">
-                          {formatCurrency(item.price)} each
-                        </p>
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex-1">
+                          <p className="font-medium text-gray-900">{item.itemName}</p>
+                          <p className="text-sm text-primary-600 font-semibold">
+                            {formatCurrency(item.price)} each
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <label className="text-sm text-gray-600">Quantity:</label>
+                          <input
+                            type="number"
+                            min="0"
+                            value={item.quantity}
+                            onChange={(e) => handleMerchandiseQuantityChange(index, e.target.value)}
+                            className="w-20 input-field"
+                          />
+                          {item.quantity > 0 && (
+                            <span className="text-sm font-medium text-gray-900">
+                              = {formatCurrency(item.price * item.quantity)}
+                            </span>
+                          )}
+                        </div>
                       </div>
-                      <div className="flex items-center gap-3">
-                        <label className="text-sm text-gray-600">Quantity:</label>
-                        <input
-                          type="number"
-                          min="0"
-                          value={item.quantity}
-                          onChange={(e) => handleMerchandiseQuantityChange(index, e.target.value)}
-                          className="w-20 input-field"
-                        />
-                        {item.quantity > 0 && (
-                          <span className="text-sm font-medium text-gray-900">
-                            = {formatCurrency(item.price * item.quantity)}
-                          </span>
+                      {/* Size / Color / Variant selectors */}
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        {item.sizes && item.sizes.length > 0 && (
+                          <div>
+                            <label className="label text-sm">Size</label>
+                            <select
+                              value={item.selectedSize || ''}
+                              onChange={(e) => handleMerchandiseFieldChange(index, 'selectedSize', e.target.value)}
+                              className="input-field"
+                            >
+                              <option value="">Select size</option>
+                              {item.sizes.map((s, i) => (
+                                <option key={i} value={s}>{s}</option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
+                        {item.colors && item.colors.length > 0 && (
+                          <div>
+                            <label className="label text-sm">Color</label>
+                            <select
+                              value={item.selectedColor || ''}
+                              onChange={(e) => handleMerchandiseFieldChange(index, 'selectedColor', e.target.value)}
+                              className="input-field"
+                            >
+                              <option value="">Select color</option>
+                              {item.colors.map((c, i) => (
+                                <option key={i} value={c}>{c}</option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
+                        {item.variants && item.variants.length > 0 && (
+                          <div>
+                            <label className="label text-sm">Variant</label>
+                            <select
+                              value={item.selectedVariant || ''}
+                              onChange={(e) => handleMerchandiseFieldChange(index, 'selectedVariant', e.target.value)}
+                              className="input-field"
+                            >
+                              <option value="">Select variant</option>
+                              {item.variants.map((v, i) => (
+                                <option key={i} value={v}>{v}</option>
+                              ))}
+                            </select>
+                          </div>
                         )}
                       </div>
                     </div>

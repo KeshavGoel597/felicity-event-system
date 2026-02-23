@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { organizerAPI } from '../services/api';
+import api from '../services/api';
 
 const OnboardingPage = () => {
   const navigate = useNavigate();
@@ -34,6 +34,19 @@ const OnboardingPage = () => {
     }
   }, [user, navigate]);
 
+  // Fetch approved organizers/clubs for follow option
+  useEffect(() => {
+    const fetchOrganizers = async () => {
+      try {
+        const response = await api.get('/organizers');
+        setOrganizers(response.data.organizers || []);
+      } catch (error) {
+        console.error('Failed to fetch organizers:', error);
+      }
+    };
+    fetchOrganizers();
+  }, []);
+
   const toggleInterest = (category) => {
     setFormData(prev => ({
       ...prev,
@@ -62,6 +75,22 @@ const OnboardingPage = () => {
       followedClubs: formData.followedClubs,
     });
 
+    setLoading(false);
+
+    if (result.success) {
+      navigate('/participant/events');
+    } else {
+      setErrors({ submit: result.error });
+    }
+  };
+
+  const handleSkip = async () => {
+    setLoading(true);
+    // Call onboarding with empty data to mark as onboarded
+    const result = await completeOnboarding({
+      areasOfInterest: [],
+      followedClubs: [],
+    });
     setLoading(false);
 
     if (result.success) {
@@ -113,10 +142,39 @@ const OnboardingPage = () => {
             </div>
           </div>
 
+          {/* Follow Clubs */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-3">
+              Follow clubs/organizers
+            </label>
+            {organizers.length > 0 ? (
+              <div className="grid grid-cols-1 gap-3 max-h-60 overflow-y-auto">
+                {organizers.map((org) => (
+                  <button
+                    key={org._id}
+                    type="button"
+                    onClick={() => toggleClub(org._id)}
+                    className={`p-3 border-2 rounded-lg text-left transition-colors ${
+                      formData.followedClubs.includes(org._id)
+                        ? 'border-primary-600 bg-primary-50'
+                        : 'border-gray-300 hover:border-primary-400'
+                    }`}
+                  >
+                    <p className="font-medium text-gray-900">{org.organizerName}</p>
+                    <p className="text-xs text-gray-500">{org.category}</p>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-gray-500 italic">No clubs available yet</p>
+            )}
+          </div>
+
           <div className="flex gap-4">
             <button
               type="button"
-              onClick={() => navigate('/participant/events')}
+              onClick={handleSkip}
+              disabled={loading}
               className="flex-1 btn-secondary"
             >
               Skip for now

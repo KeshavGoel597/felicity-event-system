@@ -152,17 +152,39 @@ const DashboardPage = () => {
                 </span>
 
                 {item.ticketId && (
-                  <p className="text-xs text-gray-500 mt-2 font-mono">
-                    Ticket: {item.ticketId}
+                  <p className="text-xs text-gray-500 mt-2">
+                    Ticket:{' '}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate('/participant/registrations');
+                      }}
+                      className="font-mono font-semibold text-primary-600 hover:text-primary-700 hover:underline transition-colors"
+                      title="View in My Registrations"
+                    >
+                      {item.ticketId}
+                    </button>
+                  </p>
+                )}
+
+                {item.eventStatus && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    Event Status: <span className="font-medium">{item.eventStatus}</span>
                   </p>
                 )}
 
                 <div className="mt-3 pt-3 border-t flex gap-2">
                   <button
-                    onClick={() => navigate(`/participant/events/${item._id}`)}
+                    onClick={() => navigate(`/participant/events/${item.eventId}`)}
                     className="text-sm text-primary-600 hover:text-primary-700 font-medium"
                   >
                     View Event
+                  </button>
+                  <button
+                    onClick={() => navigate('/participant/registrations')}
+                    className="text-sm text-gray-600 hover:text-gray-700 font-medium"
+                  >
+                    My Registrations
                   </button>
                 </div>
               </div>

@@ -110,7 +110,6 @@ const createOrganizer = async (req, res) => {
       category,
       description,
       contactEmail,
-      loginEmail,
       contactNumber,
     } = req.body;
 
@@ -122,26 +121,25 @@ const createOrganizer = async (req, res) => {
       });
     }
 
-    // Use contactEmail as loginEmail if not provided
-    const orgLoginEmail = loginEmail || contactEmail;
+    // Auto-generate login email from organizer name
+    // e.g. "Tech Club" -> "techclub@felicity.iiit.ac.in"
+    const generateLoginEmail = (name) => {
+      const slug = name
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '')
+        .substring(0, 20);
+      return `${slug}@felicity.iiit.ac.in`;
+    };
 
-    if (!orgLoginEmail) {
-      return res.status(400).json({
-        success: false,
-        message: 'Login email or contact email is required',
-      });
-    }
+    let orgLoginEmail = generateLoginEmail(organizerName);
 
-    // Check if organizer with this email already exists
-    const existingOrganizer = await Organizer.findOne({
-      loginEmail: orgLoginEmail,
-    });
-
-    if (existingOrganizer) {
-      return res.status(400).json({
-        success: false,
-        message: 'An organizer with this login email already exists',
-      });
+    // Ensure uniqueness by appending a number if needed
+    let existingOrganizer = await Organizer.findOne({ loginEmail: orgLoginEmail });
+    let counter = 1;
+    while (existingOrganizer) {
+      orgLoginEmail = generateLoginEmail(organizerName + counter);
+      existingOrganizer = await Organizer.findOne({ loginEmail: orgLoginEmail });
+      counter++;
     }
 
     // Generate random password (8-12 characters)
@@ -382,15 +380,6 @@ const enableOrganizer = async (req, res) => {
  */
 const deleteOrganizer = async (req, res) => {
   try {
-    const { confirm } = req.body;
-
-    if (confirm !== 'DELETE') {
-      return res.status(400).json({
-        success: false,
-        message: 'Please provide confirmation by sending { "confirm": "DELETE" }',
-      });
-    }
-
     const organizer = await Organizer.findById(req.params.organizerId);
 
     if (!organizer) {

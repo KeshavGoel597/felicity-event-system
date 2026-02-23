@@ -28,13 +28,44 @@ const createEvent = async (req, res) => {
       });
     }
 
-    // Create event in draft mode
-    const event = new Event({
+    // Create event in draft mode with ALL provided fields
+    const {
+      eventDescription,
+      eligibility,
+      registrationDeadline,
+      eventStartDate,
+      eventEndDate,
+      location,
+      registrationLimit,
+      registrationFee,
+      eventTags,
+      customForm,
+      merchandiseItems,
+      purchaseLimitPerParticipant,
+    } = req.body;
+
+    const eventData = {
       eventName,
       eventType,
       organizerId: req.user._id,
       status: 'Draft',
-    });
+    };
+
+    // Save all optional fields if provided
+    if (eventDescription !== undefined) eventData.eventDescription = eventDescription;
+    if (eligibility !== undefined) eventData.eligibility = eligibility;
+    if (registrationDeadline) eventData.registrationDeadline = registrationDeadline;
+    if (eventStartDate) eventData.eventStartDate = eventStartDate;
+    if (eventEndDate) eventData.eventEndDate = eventEndDate;
+    if (location !== undefined) eventData.location = location;
+    if (registrationLimit !== undefined) eventData.registrationLimit = registrationLimit;
+    if (registrationFee !== undefined) eventData.registrationFee = registrationFee;
+    if (eventTags !== undefined) eventData.eventTags = eventTags;
+    if (customForm !== undefined) eventData.customForm = customForm;
+    if (merchandiseItems !== undefined) eventData.merchandiseItems = merchandiseItems;
+    if (purchaseLimitPerParticipant !== undefined) eventData.purchaseLimitPerParticipant = purchaseLimitPerParticipant;
+
+    const event = new Event(eventData);
 
     await event.save();
 
@@ -109,6 +140,8 @@ const updateEvent = async (req, res) => {
         'customForm',
         'merchandiseItems',
         'eventBanner',
+        'eventTags',
+        'purchaseLimitPerParticipant',
       ];
 
       allowedUpdates.forEach((field) => {
@@ -235,7 +268,11 @@ const publishEvent = async (req, res) => {
       'registrationFee',
     ];
 
-    const missingFields = requiredFields.filter((field) => !event[field]);
+    const missingFields = requiredFields.filter((field) => {
+      const val = event[field];
+      // Treat 0 as a valid value (e.g. registrationFee: 0 means free event)
+      return val === undefined || val === null || val === '';
+    });
 
     if (missingFields.length > 0) {
       return res.status(400).json({
@@ -245,14 +282,7 @@ const publishEvent = async (req, res) => {
     }
 
     // Event type specific validations
-    if (event.eventType === 'Normal') {
-      if (!event.customForm || event.customForm.length === 0) {
-        return res.status(400).json({
-          success: false,
-          message: 'Normal events must have at least one custom form field',
-        });
-      }
-    } else if (event.eventType === 'Merchandise') {
+    if (event.eventType === 'Merchandise') {
       if (!event.merchandiseItems || event.merchandiseItems.length === 0) {
         return res.status(400).json({
           success: false,
@@ -312,7 +342,7 @@ const publishEvent = async (req, res) => {
     // Send Discord notification if webhook is configured
     if (event.organizerId.discordWebhook) {
       try {
-        const registrationLink = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/participant/events/${event._id}`;
+        const registrationLink = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/participant/events/${event._id}`;
         
         await sendDiscordNotification(
           event.organizerId.discordWebhook,
@@ -460,12 +490,28 @@ const getEventDetails = async (req, res) => {
     const paidRegistrations = registrations.filter(
       (r) => r.paymentStatus === 'Paid'
     ).length;
-    const revenue = paidRegistrations * (event.registrationFee || 0);
+    const pendingRegistrations = registrations.filter(
+      (r) => r.paymentStatus === 'Pending'
+    ).length;
+
+    // Revenue calculation: For merchandise events, sum up item prices; for normal events use registrationFee
+    let revenue = 0;
+    if (event.eventType === 'Merchandise') {
+      for (const reg of registrations) {
+        if (reg.paymentStatus === 'Paid' && reg.merchandiseDetails) {
+          revenue += reg.merchandiseDetails.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+        }
+      }
+    } else {
+      revenue = paidRegistrations * (event.registrationFee || 0);
+    }
+
     const attendance = registrations.filter((r) => r.attendanceMarked).length;
 
     const analytics = {
       totalRegistrations,
       paidRegistrations,
+      pendingRegistrations,
       revenue,
       attendance,
       teamCompletion: null, // For future implementation

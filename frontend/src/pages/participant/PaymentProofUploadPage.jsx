@@ -195,25 +195,31 @@ const PaymentProofUploadPage = () => {
             </div>
             <div className="flex justify-between">
               <span className="text-gray-600">Total Amount:</span>
-              <span className="font-semibold">₹{registration.totalAmount}</span>
+              <span className="font-semibold">
+                ₹{registration.merchandiseDetails && registration.merchandiseDetails.length > 0
+                  ? registration.merchandiseDetails.reduce((sum, item) => sum + (item.price * item.quantity), 0)
+                  : 0}
+              </span>
             </div>
             <div className="flex justify-between">
               <span className="text-gray-600">Registration Date:</span>
-              <span>{new Date(registration.createdAt).toLocaleDateString()}</span>
+              <span>{new Date(registration.registrationDate || registration.createdAt).toLocaleDateString()}</span>
             </div>
           </div>
 
           {/* Items List */}
-          {registration.merchandiseItems && registration.merchandiseItems.length > 0 && (
+          {registration.merchandiseDetails && registration.merchandiseDetails.length > 0 && (
             <div className="mt-4 pt-4 border-t">
               <h3 className="font-medium mb-2">Items Purchased:</h3>
               <ul className="space-y-2">
-                {registration.merchandiseItems.map((item, idx) => (
+                {registration.merchandiseDetails.map((item, idx) => (
                   <li key={idx} className="flex justify-between text-sm">
                     <span>
                       {item.itemName} 
-                      {item.selectedSize && ` (${item.selectedSize})`} 
-                      × {item.quantity}
+                      {item.selectedSize && ` (Size: ${item.selectedSize})`}
+                      {item.selectedColor && ` (Color: ${item.selectedColor})`}
+                      {item.selectedVariant && ` (Variant: ${item.selectedVariant})`}
+                      {' '}× {item.quantity}
                     </span>
                     <span className="font-medium">₹{item.price * item.quantity}</span>
                   </li>

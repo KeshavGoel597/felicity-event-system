@@ -103,11 +103,11 @@ const getOrganizerEvents = async (req, res) => {
 
     let query = { organizerId };
 
-    // Only show published events to public
-    if (status && status === 'Published') {
-      query.status = 'Published';
+    // Only show published/ongoing events to public
+    if (status && ['Published', 'Ongoing', 'Completed'].includes(status)) {
+      query.status = status;
     } else {
-      query.status = 'Published'; // Default to published only
+      query.status = { $in: ['Published', 'Ongoing'] }; // Default to published + ongoing
     }
 
     const events = await Event.find(query)

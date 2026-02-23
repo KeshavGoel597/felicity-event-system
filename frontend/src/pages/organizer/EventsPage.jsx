@@ -236,7 +236,10 @@ const OrganizerEventsPage = () => {
                       <div className="flex items-center">
                         <Users className="w-4 h-4 mr-1 text-primary-600" />
                         <span>
-                          {event.currentRegistrations || 0} / {event.registrationLimit || '∞'} registered
+                          {event.actualRegistrations ?? event.currentRegistrations ?? 0} / {event.registrationLimit || '∞'} registered
+                          {event.pendingRegistrations > 0 && (
+                            <span className="text-yellow-600 ml-1">({event.pendingRegistrations} pending)</span>
+                          )}
                         </span>
                       </div>
                       <span className="badge badge-info">{event.eventType}</span>

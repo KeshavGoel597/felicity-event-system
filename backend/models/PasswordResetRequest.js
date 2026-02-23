@@ -26,6 +26,9 @@ const passwordResetRequestSchema = new mongoose.Schema({
   rejectionReason: {
     type: String,
   },
+  adminComments: {
+    type: String,
+  },
   temporaryPassword: {
     type: String,
   },

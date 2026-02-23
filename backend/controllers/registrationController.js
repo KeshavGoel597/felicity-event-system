@@ -39,8 +39,8 @@ const registerForEvent = async (req, res) => {
       });
     }
 
-    // Check if event is published
-    if (event.status !== 'Published') {
+    // Check if event is published or ongoing
+    if (!['Published', 'Ongoing'].includes(event.status)) {
       return res.status(400).json({
         success: false,
         message: 'Event is not available for registration',
@@ -208,8 +208,11 @@ Felicity Team
       // Don't fail the registration if email fails
     }
 
-    // Return populated registration
-    await registration.populate('eventId organizerId');
+    // Return populated registration (Registration has no organizerId field — populate via eventId)
+    await registration.populate({
+      path: 'eventId',
+      populate: { path: 'organizerId', select: 'organizerName' },
+    });
 
     res.status(201).json({
       success: true,
@@ -294,6 +297,25 @@ const purchaseMerchandise = async (req, res) => {
     let totalQuantity = 0;
     const merchandiseItems = [];
 
+    // FIX Issue 35: Get pending order quantities to reserve stock properly
+    // Find all pending/paid registrations for this event to compute reserved quantities per item
+    const existingOrders = await Registration.find({
+      eventId,
+      registrationType: 'Merchandise',
+      paymentStatus: { $in: ['Pending', 'Paid'] },
+    }).select('merchandiseDetails');
+
+    // Build a map: itemId → total reserved quantity (pending + approved orders)
+    const reservedQuantityMap = {};
+    for (const order of existingOrders) {
+      if (order.merchandiseDetails) {
+        for (const detail of order.merchandiseDetails) {
+          const key = detail.itemId.toString();
+          reservedQuantityMap[key] = (reservedQuantityMap[key] || 0) + detail.quantity;
+        }
+      }
+    }
+
     for (const item of items) {
       const { merchandiseId, quantity, size, color, variant } = item;
 
@@ -309,11 +331,13 @@ const purchaseMerchandise = async (req, res) => {
         });
       }
 
-      // FIX: Use stockQuantity instead of stock
-      if (merch.stockQuantity < quantity) {
+      // FIX Issue 35: Check available stock = physical stock - reserved (pending+approved) quantities
+      const reservedQty = reservedQuantityMap[merch._id.toString()] || 0;
+      const availableStock = merch.stockQuantity - reservedQty;
+      if (availableStock < quantity) {
         return res.status(400).json({
           success: false,
-          message: `Insufficient stock for ${merch.itemName}`,
+          message: `Insufficient stock for ${merch.itemName}. Only ${Math.max(0, availableStock)} available.`,
         });
       }
 
@@ -553,10 +577,30 @@ const cancelRegistration = async (req, res) => {
     registration.participationStatus = 'Cancelled';
     await registration.save();
 
-    // Decrement currentRegistrations on the event
+    // Decrement currentRegistrations on the event (only if it was counted)
     if (registration.eventId && registration.eventId.currentRegistrations > 0) {
-      registration.eventId.currentRegistrations -= 1;
-      await registration.eventId.save();
+      // For merchandise, currentRegistrations is only incremented on approval
+      // So only decrement if payment was approved (Paid)
+      if (registration.registrationType === 'Merchandise') {
+        if (registration.paymentStatus === 'Paid') {
+          registration.eventId.currentRegistrations -= 1;
+          await registration.eventId.save();
+
+          // Also re-increment stock for approved merchandise orders
+          if (registration.merchandiseDetails && registration.merchandiseDetails.length > 0) {
+            for (const item of registration.merchandiseDetails) {
+              await Event.findOneAndUpdate(
+                { _id: registration.eventId._id, 'merchandiseItems._id': item.itemId },
+                { $inc: { 'merchandiseItems.$.stockQuantity': item.quantity } }
+              );
+            }
+          }
+        }
+      } else {
+        // Normal event — always decrement
+        registration.eventId.currentRegistrations -= 1;
+        await registration.eventId.save();
+      }
     }
 
     res.status(200).json({

@@ -27,6 +27,7 @@ import ParticipantOrganizerDetailPage from './pages/participant/OrganizerDetailP
 import OrganizerDashboardPage from './pages/organizer/DashboardPage';
 import OrganizerEventsPage from './pages/organizer/EventsPage';
 import OrganizerCreateEditEventPage from './pages/organizer/CreateEditEventPage';
+import OrganizerEventDetailPage from './pages/organizer/EventDetailPage';
 import OrganizerProfilePage from './pages/organizer/ProfilePage';
 import OrganizerQRScannerPage from './pages/organizer/QRScannerPage';
 import OrganizerAttendanceListPage from './pages/organizer/AttendanceListPage';
@@ -173,6 +174,14 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={['organizer']}>
                 <OrganizerCreateEditEventPage />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/organizer/events/:eventId" 
+            element={
+              <ProtectedRoute allowedRoles={['organizer']}>
+                <OrganizerEventDetailPage />
               </ProtectedRoute>
             } 
           />

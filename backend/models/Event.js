@@ -146,20 +146,18 @@ const eventSchema = new mongoose.Schema(
 );
 
 // Validation: eventEndDate must be after eventStartDate
-eventSchema.pre('save', function (next) {
+eventSchema.pre('save', function () {
   if (this.eventStartDate && this.eventEndDate) {
     if (this.eventEndDate <= this.eventStartDate) {
-      return next(new Error('Event end date must be after event start date'));
+      throw new Error('Event end date must be after event start date');
     }
   }
   
   if (this.registrationDeadline && this.eventStartDate) {
     if (this.registrationDeadline >= this.eventStartDate) {
-      return next(new Error('Registration deadline must be before event start date'));
+      throw new Error('Registration deadline must be before event start date');
     }
   }
-  
-  next();
 });
 
 // Index for faster queries

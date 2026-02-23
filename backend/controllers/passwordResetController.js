@@ -47,8 +47,8 @@ exports.requestPasswordReset = async (req, res) => {
       reason,
     });
 
-    // Send confirmation email to organizer
-    await sendEmail({
+    // Send confirmation email to organizer (non-blocking - don't await)
+    sendEmail({
       to: organizer.loginEmail,
       subject: 'Password Reset Request Received',
       html: `
@@ -59,7 +59,7 @@ exports.requestPasswordReset = async (req, res) => {
         <p>You will receive an email once your request is reviewed by the admin.</p>
         <p>Thank you for your patience.</p>
       `,
-    });
+    }).catch(err => console.error('Failed to send reset request confirmation email:', err));
 
     res.status(201).json({
       success: true,
@@ -124,6 +124,7 @@ exports.getPasswordResetRequests = async (req, res) => {
 exports.approvePasswordReset = async (req, res) => {
   try {
     const { requestId } = req.params;
+    const { comments } = req.body || {};
 
     // Find the request
     const resetRequest = await PasswordResetRequest.findById(requestId).populate('organizer');
@@ -159,6 +160,7 @@ exports.approvePasswordReset = async (req, res) => {
     resetRequest.reviewedBy = req.user._id;
     resetRequest.reviewedAt = new Date();
     resetRequest.temporaryPassword = temporaryPassword; // Store plain text (only for admin reference)
+    if (comments) resetRequest.adminComments = comments;
     await resetRequest.save();
 
     // Send email to organizer with temporary password
@@ -169,6 +171,12 @@ exports.approvePasswordReset = async (req, res) => {
         <h2>Password Reset Approved</h2>
         <p>Dear ${resetRequest.organizer.organizerName},</p>
         <p>Your password reset request has been approved by the admin.</p>
+        ${comments ? `
+        <div style="background-color: #eff6ff; padding: 16px; border-radius: 8px; margin: 16px 0; border-left: 4px solid #3b82f6;">
+          <p style="margin: 0;"><strong>Admin Comments:</strong></p>
+          <p style="margin: 8px 0;">${comments}</p>
+        </div>
+        ` : ''}
         <div style="background-color: #f3f4f6; padding: 16px; border-radius: 8px; margin: 16px 0;">
           <p style="margin: 0;"><strong>Temporary Password:</strong></p>
           <p style="font-size: 20px; font-family: monospace; color: #1f2937; margin: 8px 0;"><strong>${temporaryPassword}</strong></p>

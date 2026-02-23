@@ -28,6 +28,7 @@ const CreateEditEventPage = () => {
     eventTags: [],
     customForm: [],
     merchandiseItems: [],
+    purchaseLimitPerParticipant: '',
   });
 
   const eligibilityOptions = ['Open to All', 'IIIT Only'];
@@ -43,13 +44,21 @@ const CreateEditEventPage = () => {
       setLoading(true);
       const response = await organizerAPI.getEventById(eventId);
       const event = response.data.event;
-      
-      // Format dates for input fields
+
+      // Format dates for datetime-local input using LOCAL time (not UTC)
+      const toLocalDatetime = (dateStr) => {
+        if (!dateStr) return '';
+        const d = new Date(dateStr);
+        // Build YYYY-MM-DDTHH:MM in local timezone
+        const pad = (n) => String(n).padStart(2, '0');
+        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+      };
+
       setFormData({
         ...event,
-        eventStartDate: event.eventStartDate ? new Date(event.eventStartDate).toISOString().slice(0, 16) : '',
-        eventEndDate: event.eventEndDate ? new Date(event.eventEndDate).toISOString().slice(0, 16) : '',
-        registrationDeadline: event.registrationDeadline ? new Date(event.registrationDeadline).toISOString().slice(0, 16) : '',
+        eventStartDate: toLocalDatetime(event.eventStartDate),
+        eventEndDate: toLocalDatetime(event.eventEndDate),
+        registrationDeadline: toLocalDatetime(event.registrationDeadline),
         customForm: event.customForm || [],
         merchandiseItems: event.merchandiseItems || [],
       });
@@ -164,6 +173,9 @@ const CreateEditEventPage = () => {
         submitData.customForm = formData.customForm.filter(f => f.fieldLabel?.trim());
       } else if (formData.eventType === 'Merchandise') {
         submitData.merchandiseItems = formData.merchandiseItems.filter(m => m.itemName?.trim());
+        if (formData.purchaseLimitPerParticipant) {
+          submitData.purchaseLimitPerParticipant = parseInt(formData.purchaseLimitPerParticipant);
+        }
       }
 
       if (isEditMode) {
@@ -357,6 +369,24 @@ const CreateEditEventPage = () => {
                   />
                 </div>
               </div>
+
+              {/* Event Tags */}
+              <div className="mt-4">
+                <label className="label">Event Tags (comma-separated)</label>
+                <input
+                  type="text"
+                  value={(formData.eventTags || []).join(', ')}
+                  onChange={(e) => setFormData(prev => ({
+                    ...prev,
+                    eventTags: e.target.value.split(',').map(t => t.trim()).filter(Boolean),
+                  }))}
+                  className="input-field"
+                  placeholder="e.g., hackathon, AI, workshop, beginner-friendly"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Tags help participants discover your event through search and filtering
+                </p>
+              </div>
             </div>
 
             {/* Custom Form Fields (for Normal events) */}
@@ -446,13 +476,25 @@ const CreateEditEventPage = () => {
                         </div>
                         {['dropdown', 'checkbox', 'radio'].includes(field.fieldType) && (
                           <div className="mt-3">
-                            <label className="label text-sm">Options (comma-separated)</label>
+                            <label className="label text-sm">Options (semicolon-separated)</label>
                             <input
                               type="text"
-                              value={(field.options || []).join(', ')}
-                              onChange={(e) => updateCustomField(index, 'options', e.target.value.split(',').map(o => o.trim()).filter(Boolean))}
+                              value={field._rawOptions !== undefined ? field._rawOptions : (field.options || []).join('; ')}
+                              onChange={(e) => {
+                                const raw = e.target.value;
+                                // Store raw text for editing, parse options for data
+                                const parsed = raw.split(';').map(o => o.trim()).filter(Boolean);
+                                updateCustomField(index, 'options', parsed);
+                                updateCustomField(index, '_rawOptions', raw);
+                              }}
+                              onBlur={(e) => {
+                                // On blur, clean up: re-join parsed options
+                                const parsed = (field.options || []).filter(Boolean);
+                                updateCustomField(index, '_rawOptions', undefined);
+                                updateCustomField(index, 'options', parsed);
+                              }}
                               className="input-field"
-                              placeholder="e.g., S, M, L, XL"
+                              placeholder="e.g., Option A; Option B; Option C"
                               disabled={formData.isFormLocked}
                             />
                           </div>
@@ -477,6 +519,23 @@ const CreateEditEventPage = () => {
                     <Plus className="w-4 h-4 mr-1 inline" />
                     Add Item
                   </button>
+                </div>
+
+                {/* Purchase Limit */}
+                <div className="mb-4">
+                  <label className="label">Purchase Limit Per Participant</label>
+                  <input
+                    type="number"
+                    name="purchaseLimitPerParticipant"
+                    value={formData.purchaseLimitPerParticipant}
+                    onChange={handleChange}
+                    className="input-field"
+                    min="1"
+                    placeholder="Leave empty for unlimited"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Maximum total items a single participant can purchase
+                  </p>
                 </div>
 
                 {formData.merchandiseItems.length === 0 ? (

@@ -255,7 +255,7 @@ const OrganizerDashboardPage = () => {
                     <span className="text-sm opacity-75">→</span>
                   </button>
                   <button
-                    onClick={() => navigate('/organizer/registrations')}
+                    onClick={() => navigate('/organizer/events')}
                     className="w-full btn-secondary text-left flex items-center justify-between"
                   >
                     <span className="flex items-center">
@@ -265,7 +265,7 @@ const OrganizerDashboardPage = () => {
                     <span className="text-sm opacity-75">→</span>
                   </button>
                   <button
-                    onClick={() => navigate('/organizer/attendance')}
+                    onClick={() => navigate('/organizer/events')}
                     className="w-full btn-secondary text-left flex items-center justify-between"
                   >
                     <span className="flex items-center">

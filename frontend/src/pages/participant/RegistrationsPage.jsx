@@ -5,7 +5,7 @@ import LoadingSpinner from '../../components/LoadingSpinner';
 import Alert from '../../components/Alert';
 import { 
   Calendar, MapPin, Ticket, Download, Eye, ArrowLeft, 
-  LogOut, User, Filter 
+  LogOut, User, Filter, Upload 
 } from 'lucide-react';
 import { 
   formatDate, formatCurrency, getRegistrationStatusBadgeClass 
@@ -263,15 +263,48 @@ const ParticipantRegistrationsPage = () => {
                   </div>
                 )}
 
+                {/* Payment Info for Merchandise */}
+                {registration.registrationType === 'Merchandise' && (
+                  <div className="mb-4 p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                    <p className="text-sm text-gray-700">
+                      Payment Status:{' '}
+                      <span className={`font-semibold ${
+                        registration.paymentStatus === 'Paid' ? 'text-green-600' 
+                        : registration.paymentStatus === 'Rejected' ? 'text-red-600' 
+                        : 'text-yellow-600'
+                      }`}>
+                        {registration.paymentStatus === 'Paid' ? 'Approved' : registration.paymentStatus}
+                      </span>
+                    </p>
+                  </div>
+                )}
+
                 {/* Actions */}
                 <div className="flex gap-2">
-                  <button
-                    onClick={() => handleViewQR(registration)}
-                    className="flex-1 btn-primary text-sm"
-                  >
-                    <Eye className="w-4 h-4 mr-1 inline" />
-                    View QR Code
-                  </button>
+                  {registration.qrCode ? (
+                    <button
+                      onClick={() => handleViewQR(registration)}
+                      className="flex-1 btn-primary text-sm"
+                    >
+                      <Eye className="w-4 h-4 mr-1 inline" />
+                      View QR Code
+                    </button>
+                  ) : registration.registrationType === 'Merchandise' && registration.paymentStatus !== 'Paid' ? (
+                    <button
+                      onClick={() => navigate(`/participant/registrations/${registration._id}/payment-proof`)}
+                      className="flex-1 btn-primary text-sm bg-yellow-500 hover:bg-yellow-600 border-yellow-500"
+                    >
+                      <Upload className="w-4 h-4 mr-1 inline" />
+                      {registration.paymentStatus === 'Rejected' ? 'Re-upload Payment Proof' : 'Upload Payment Proof'}
+                    </button>
+                  ) : (
+                    <button
+                      disabled
+                      className="flex-1 btn-primary text-sm opacity-50 cursor-not-allowed"
+                    >
+                      QR Pending
+                    </button>
+                  )}
                   <button
                     onClick={() => navigate(`/participant/events/${registration.event?._id}`)}
                     className="flex-1 btn-secondary text-sm"

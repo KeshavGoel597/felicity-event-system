@@ -12,17 +12,50 @@ const getDashboard = async (req, res) => {
   try {
     // Find all events created by logged-in organizer
     const events = await Event.find({ organizerId: req.user._id })
-      .select('eventName eventType status eventStartDate eventEndDate registrationFee')
+      .select('eventName eventType status eventStartDate eventEndDate registrationFee currentRegistrations registrationLimit eligibility eventDescription merchandiseItems purchaseLimitPerParticipant')
       .sort({ createdAt: -1 });
 
     // Auto-compute event statuses based on dates
     await Event.autoUpdateStatuses(events);
 
+    // Augment each event with actual registration counts from Registration collection
+    const eventIds = events.map((e) => e._id);
+    const regCounts = await Registration.aggregate([
+      { $match: { eventId: { $in: eventIds } } },
+      {
+        $group: {
+          _id: '$eventId',
+          totalRegistrations: { $sum: 1 },
+          paidRegistrations: {
+            $sum: { $cond: [{ $eq: ['$paymentStatus', 'Paid'] }, 1, 0] },
+          },
+          pendingRegistrations: {
+            $sum: { $cond: [{ $eq: ['$paymentStatus', 'Pending'] }, 1, 0] },
+          },
+        },
+      },
+    ]);
+
+    const regCountMap = {};
+    for (const rc of regCounts) {
+      regCountMap[rc._id.toString()] = rc;
+    }
+
+    // Convert to plain objects for augmentation
+    const eventsData = events.map((event) => {
+      const obj = event.toObject();
+      const rc = regCountMap[obj._id.toString()];
+      obj.actualRegistrations = rc ? rc.totalRegistrations : 0;
+      obj.paidRegistrations = rc ? rc.paidRegistrations : 0;
+      obj.pendingRegistrations = rc ? rc.pendingRegistrations : 0;
+      return obj;
+    });
+
     // Calculate analytics for COMPLETED events only
     const completedEvents = await Event.find({
       organizerId: req.user._id,
       status: 'Completed',
-    }).select('_id registrationFee');
+    }).select('_id registrationFee eventType');
 
     const completedEventIds = completedEvents.map((e) => e._id);
 
@@ -41,14 +74,20 @@ const getDashboard = async (req, res) => {
       // Calculate attendance
       totalAttendance = registrations.filter((r) => r.attendanceMarked).length;
 
-      // Calculate revenue (registrationFee × paid registrations)
+      // Calculate revenue: for merchandise events, sum item prices; for normal events use registrationFee
       for (const registration of registrations) {
         if (registration.paymentStatus === 'Paid') {
           const event = completedEvents.find(
             (e) => e._id.toString() === registration.eventId.toString()
           );
           if (event) {
-            totalRevenue += event.registrationFee || 0;
+            if (event.eventType === 'Merchandise' && registration.merchandiseDetails && registration.merchandiseDetails.length > 0) {
+              totalRevenue += registration.merchandiseDetails.reduce(
+                (sum, item) => sum + (item.price * item.quantity), 0
+              );
+            } else {
+              totalRevenue += event.registrationFee || 0;
+            }
           }
         }
       }
@@ -61,7 +100,7 @@ const getDashboard = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      events,
+      events: eventsData,
       analytics: {
         totalRegistrations,
         totalRevenue,

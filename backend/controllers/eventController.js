@@ -48,13 +48,37 @@ const browseEvents = async (req, res) => {
     if (followedOnly === 'true' && userId) {
       const User = require('../models/User');
       const user = await User.findById(userId);
-      if (user && user.followedClubs.length > 0) {
+      if (user && user.followedClubs && user.followedClubs.length > 0) {
         query.organizerId = { $in: user.followedClubs };
+      } else {
+        // User follows no clubs — return empty results
+        return res.status(200).json({
+          success: true,
+          count: 0,
+          events: [],
+        });
       }
     }
 
-    // Apply search filter (search in event name or organizer name)
+    // Apply search filter (search in event name or organizer names — supports partial & fuzzy matching)
     if (search) {
+      // Build a fuzzy regex: allow 1 character mismatch by inserting .? between characters
+      const escapedSearch = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      // Split into words and search each word with partial matching
+      const searchWords = escapedSearch.split(/\s+/).filter(Boolean);
+      
+      // Create flexible regex patterns for each word
+      const wordPatterns = searchWords.map(word => {
+        // Allow fuzzy matching: create pattern that matches if most characters match
+        // Insert optional wildcard between chars for typo tolerance
+        const fuzzyChars = word.split('').join('.?');
+        return fuzzyChars;
+      });
+      
+      // Combined pattern: all words must appear (in any order)
+      const combinedPattern = wordPatterns.map(p => `(?=.*${p})`).join('');
+      const fuzzyRegex = new RegExp(combinedPattern, 'i');
+
       // First, find organizers matching the search term
       const matchingOrganizers = await Organizer.find({
         organizerName: { $regex: search, $options: 'i' },
@@ -63,9 +87,11 @@ const browseEvents = async (req, res) => {
 
       const organizerIds = matchingOrganizers.map((org) => org._id);
 
-      // Search in event name OR matching organizer IDs
+      // Search in event name (fuzzy) OR event tags OR matching organizer IDs
       query.$or = [
+        { eventName: { $regex: fuzzyRegex } },
         { eventName: { $regex: search, $options: 'i' } },
+        { eventTags: { $regex: search, $options: 'i' } },
         { organizerId: { $in: organizerIds } },
       ];
     }
@@ -196,7 +222,7 @@ const getTrendingEvents = async (req, res) => {
     // Fetch the actual events
     const events = await Event.find({
       _id: { $in: eventIds },
-      status: 'Published',
+      status: { $in: ['Published', 'Ongoing'] },
     })
       .populate('organizerId', 'organizerName category')
       .lean();
@@ -256,9 +282,18 @@ const getEventDetails = async (req, res) => {
       await event.save();
     }
 
+    // Get actual registration count (including pending orders for merchandise)
+    const actualRegistrations = await Registration.countDocuments({
+      eventId: event._id,
+      paymentStatus: { $in: ['Pending', 'Paid'] },
+    });
+
+    const eventObj = event.toObject();
+    eventObj.actualRegistrations = actualRegistrations;
+
     res.status(200).json({
       success: true,
-      data: event,
+      data: eventObj,
     });
   } catch (error) {
     console.error('Get event details error:', error);
