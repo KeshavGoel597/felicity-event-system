@@ -1,2 +1,2 @@
-Frontend URL: <DEPLOYED_FRONTEND_URL>
-Backend URL: <DEPLOYED_BACKEND_URL>
+Frontend URL: https://felicity-henna.vercel.app/
+Backend URL: https://felicity-qzyp.onrender.com/
